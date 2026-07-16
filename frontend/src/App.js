@@ -29,7 +29,7 @@ import PersonaScoringConfigList from "./components/Persona/ScoringConfig/Persona
 import Nav_Sidebar from "./components/Headerbar";
 import PersonaReportPage from "./components/Persona/PersonaReportPage";
 import Intellegence from "./components/Intelligence/intellegence";
-
+import ThemeProvider from "./theme/ThemeContext";
 function Layout() {
   const location = useLocation();
 
@@ -41,7 +41,7 @@ function Layout() {
     <>
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {!shouldHideLayout && <Nav_Sidebar />}
+      {/* {!shouldHideLayout && <Nav_Sidebar />*/}
       {!shouldHideLayout && <Header />}
 
       <div className="d-flex">
@@ -86,9 +86,11 @@ function Layout() {
 
 function App() {
   return (
-    <Router>
-      <Layout />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Layout />
+      </Router>
+    </ThemeProvider>
   );
 }
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-import snowflake.connector
+# import snowflake.connector
 import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization

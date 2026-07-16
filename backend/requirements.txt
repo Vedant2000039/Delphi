@@ -9,3 +9,7 @@ httpx
 beautifulsoup4
 playwright
 bcrypt
+openai
+requests
+snowflake-connector-python
+pytrends

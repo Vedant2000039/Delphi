@@ -51,9 +51,9 @@ export default function Header() {
 </div>
 
                     {/* CENTER: The Navigation Dock (Integrated) */}
-                    <div className="flex-grow-1 d-flex justify-content-center">
+                    {/* <div className="flex-grow-1 d-flex justify-content-center">
                         <Nav_Sidebar />
-                    </div>
+                    </div> */}
 
                     {/* RIGHT: Settings - Fixed Width to match left side balance */}
                     <div className="d-flex justify-content-end" style={{ minWidth: '180px' }}>

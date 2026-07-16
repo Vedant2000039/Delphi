@@ -16,13 +16,13 @@ const FIELD_LABELS = {
 };
 
 const FIELD_ICONS = {
-  geography: "",
-  industry: "",
-  industry_domain: "",
-  job_function: "",
-  job_level: "",
-  employee_size: "",
-  revenue_range: "",
+  geography: "🌍",
+  industry: "🏢",
+  industry_domain: "🔬",
+  job_function: "💼",
+  job_level: "⭐",
+  employee_size: "👥",
+  revenue_range: "💰",
 };
 
 const SUGGESTION_LABELS = {
@@ -44,6 +44,245 @@ const FIELD_ORDER = [
   "employee_size",
   "revenue_range",
 ];
+
+// ─────────────────────────────────────────────────────────────
+// TREND CARD COMPONENTS
+// ─────────────────────────────────────────────────────────────
+
+const CHART_COLORS = [
+  "#6366f1", "#1baf7a", "#eda100", "#e34948",
+  "#a78bfa", "#eb6834", "#e87ba4", "#008300",
+];
+
+const REGION_COMMENTS = {
+  "United States":  "Largest enterprise buyer pool; highest B2B adoption globally",
+  "India":          "Fastest-growing mid-market; strong IT and healthcare enterprise demand",
+  "United Kingdom": "Mature regulatory environment; NHS and finance drive procurement",
+  "Germany":        "Largest EU economy; high-value but rigorous B2B sales cycles",
+  "Australia":      "High per-capita IT spend; strong public sector and healthcare",
+  "Canada":         "Close US buyer alignment; ideal for co-sell expansion",
+  "Singapore":      "APAC regional HQ hub; progressive procurement environment",
+  "UAE":            "High enterprise spending; gateway to GCC and MENA markets",
+  "France":         "Large enterprise market; government and healthcare lead digital",
+  "Netherlands":    "European tech hub; high-density enterprise cluster",
+  "Japan":          "Premium market with regulatory-driven procurement",
+  "South Korea":    "Rapid enterprise digitisation; strong telecom and manufacturing",
+  "Brazil":         "Largest Latin America market; growing enterprise tech adoption",
+  "Israel":         "High density of B2B tech buyers; strong scale-up ecosystem",
+  "Sweden":         "High digitisation index; strong public sector and fintech",
+  "Spain":          "Growing digital transformation investment across enterprise",
+  "Poland":         "Fastest-growing Central European tech market",
+  "Indonesia":      "Largest Southeast Asia market; rapid enterprise digitalisation",
+  "Malaysia":       "Regional tech hub; high government digitisation spend",
+  "South Africa":   "Largest African enterprise market; Sub-Saharan gateway",
+};
+
+function getRegionComment(region) {
+  return REGION_COMMENTS[region] || "Active enterprise market with B2B growth potential";
+}
+
+function DonutChart({ slices }) {
+  const r = 52, cx = 80, cy = 80;
+  const circ = 2 * Math.PI * r;
+  let cum = 0;
+  const arcs = slices.map((s, i) => {
+    const offset = circ * (1 - cum / 100);
+    const dash   = circ * s.pct / 100;
+    cum += s.pct;
+    return { ...s, offset, dash, color: CHART_COLORS[i] || "#555" };
+  });
+  return (
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <circle cx={cx} cy={cy} r={r} fill="none"
+        stroke="rgba(255,255,255,0.06)" strokeWidth="18" />
+      {arcs.map((a, i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+          stroke={a.color} strokeWidth="18"
+          strokeDasharray={`${a.dash} ${circ - a.dash}`}
+          strokeDashoffset={a.offset}
+          transform={`rotate(-90 ${cx} ${cy})`}
+        />
+      ))}
+      <text x={cx} y={cy - 7} textAnchor="middle" fontSize="10"
+        fill="rgba(255,255,255,0.35)">top market</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize="13"
+        fontWeight="500" fill="#e8eaf0">
+        {slices[0]?.region?.split(" ")[0] || ""}
+      </text>
+    </svg>
+  );
+}
+
+function Sparkline({ data }) {
+  if (!data || data.length < 2) return null;
+  const w = 220, h = 40;
+  const vals = data.map(d => d.value);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals) || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - ((v - min) / (max - min || 1)) * h;
+    return `${x},${y}`;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block" }}>
+      <polyline points={pts} fill="none" stroke="#6366f1"
+        strokeWidth="2" strokeLinejoin="round" />
+      <polyline
+        points={`0,${h} ${pts} ${w},${h}`}
+        fill="#6366f1" fillOpacity="0.1" stroke="none" />
+    </svg>
+  );
+}
+
+function TrendCard({ data, onTargetGeo }) {
+  if (!data) return null;
+  const {
+    product, kpi, top_regions, pie_slices, time_trend,
+    rising, summary, recommendation, cta_geographies, data_source,
+  } = data;
+
+  return (
+    <div className="trend-card">
+
+      {/* Header */}
+      <div className="trend-header">
+        <div>
+          <div className="trend-title">
+            Trend Analysis: {product.charAt(0).toUpperCase() + product.slice(1)}
+          </div>
+          <div className="trend-source">
+            {data_source} · Last 12 months · Worldwide
+          </div>
+        </div>
+        <span className={`trend-badge ${data_source === "Google Trends (live)" ? "live" : "est"}`}>
+          {data_source === "Google Trends (live)" ? "● Live" : "● Estimated"}
+        </span>
+      </div>
+
+      {/* KPI Row */}
+      <div className="trend-kpi-row">
+        {[
+          { label: "Top market",       value: `${kpi.top_market_flag} ${kpi.top_market}`, sub: `Score ${kpi.top_market_score}/100` },
+          { label: "Markets analysed", value: kpi.markets_analysed,                        sub: "B2B-relevant only" },
+          { label: "Avg. interest",    value: `${kpi.avg_score}/100`,                      sub: "across top markets" },
+          { label: "Rising signals",   value: kpi.rising_count,                            sub: "breakout queries" },
+        ].map(k => (
+          <div key={k.label} className="trend-kpi-tile">
+            <div className="trend-kpi-label">{k.label}</div>
+            <div className="trend-kpi-value">{k.value}</div>
+            <div className="trend-kpi-sub">{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts Row */}
+      <div className="trend-charts-row">
+
+        {/* Bar list */}
+        <div className="trend-bar-panel">
+          <div className="trend-panel-title">Top regions by search interest</div>
+          {top_regions.map((r, i) => (
+            <div key={r.region} className="trend-region-row">
+              <div className="trend-region-top">
+                <span className="trend-region-flag">{r.flag}</span>
+                <span className="trend-region-name">{i + 1}. {r.region}</span>
+                <div className="trend-bar-wrap">
+                  <div
+                    className="trend-bar-fill"
+                    style={{ width: `${r.score}%`, background: CHART_COLORS[i] || "#6366f1" }}
+                  />
+                </div>
+                <span className="trend-bar-score">{r.score}</span>
+              </div>
+              <div className="trend-region-comment">{getRegionComment(r.region)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Donut */}
+        <div className="trend-donut-panel">
+          <div className="trend-panel-title">Interest distribution</div>
+          <DonutChart slices={pie_slices} />
+          <div className="trend-donut-legend">
+            {pie_slices.slice(0, 5).map((s, i) => (
+              <div key={s.region} className="trend-legend-row">
+                <div className="trend-legend-dot" style={{ background: CHART_COLORS[i] }} />
+                <span className="trend-legend-name">{s.region}</span>
+                <span className="trend-legend-pct">{s.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Sparkline — only shown when time data available */}
+      {time_trend && time_trend.length > 2 && (
+        <div className="trend-sparkline-panel">
+          <div className="trend-panel-title">Interest over time (12 months)</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <Sparkline data={time_trend} />
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.8 }}>
+              <div>{time_trend[0]?.date}</div>
+              <div>→ {time_trend[time_trend.length - 1]?.date}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Insight */}
+      {summary && (
+        <div className="trend-insight-box">
+          <div className="trend-box-label">Market insight</div>
+          <p className="trend-box-text">{summary}</p>
+        </div>
+      )}
+
+      {/* Recommendation */}
+      {recommendation && (
+        <div className="trend-insight-box recommendation">
+          <div className="trend-box-label recommendation">Campaign recommendation</div>
+          <p className="trend-box-text">{recommendation}</p>
+        </div>
+      )}
+
+      {/* Rising signals */}
+      {rising && rising.length > 0 && (
+        <div className="trend-rising-section">
+          <div className="trend-panel-title">Rising search signals</div>
+          <div className="trend-rising-grid">
+            {rising.map((r, i) => (
+              <div key={i} className="trend-rising-chip">
+                <div className="trend-rising-query">{r.query}</div>
+                <div className="trend-rising-value">{r.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* CTA buttons */}
+      {cta_geographies && cta_geographies.length > 0 && (
+        <div className="trend-cta-row">
+          <span className="trend-cta-label">Find leads in:</span>
+          {cta_geographies.map((cta, i) => (
+            <button
+              key={i}
+              className={`trend-cta-btn ${i === 0 ? "primary" : "ghost"}`}
+              onClick={() => onTargetGeo && onTargetGeo(cta.geography)}
+            >
+              {top_regions[i]?.flag} {cta.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXISTING COMPONENTS (unchanged)
+// ─────────────────────────────────────────────────────────────
 
 function ContextPill({ field, value }) {
   return (
@@ -99,11 +338,7 @@ function SuggestionGroup({ field, items, onSelect }) {
       </div>
       <div className="suggestion-chips">
         {items.map(item => (
-          <button
-            key={item}
-            className="chip"
-            onClick={() => onSelect(item)}
-          >
+          <button key={item} className="chip" onClick={() => onSelect(item)}>
             {item}
           </button>
         ))}
@@ -120,16 +355,20 @@ function TypingDots() {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────
+
 export default function Intellegence() {
-  const [messages, setMessages]       = useState([]);
-  const [input, setInput]             = useState("");
-  const [loading, setLoading]         = useState(false);
-  const [context, setContext]         = useState({});
-  const [suggestions, setSuggestions] = useState({});
-  const [progress, setProgress]       = useState({ filled: 0, total: 7 });
-  const [chatHistory, setChatHistory] = useState([]);
+  const [messages, setMessages]         = useState([]);
+  const [input, setInput]               = useState("");
+  const [loading, setLoading]           = useState(false);
+  const [context, setContext]           = useState({});
+  const [suggestions, setSuggestions]   = useState({});
+  const [progress, setProgress]         = useState({ filled: 0, total: 7 });
+  const [chatHistory, setChatHistory]   = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen]   = useState(true);
 
   const bottomRef   = useRef(null);
   const textareaRef = useRef(null);
@@ -174,24 +413,34 @@ export default function Intellegence() {
       const data = await res.json();
       console.log("[API Response]", data);
 
-      // Update context display
-      if (data.context) setContext(data.context);
+      if (data.context)  setContext(data.context);
       if (data.progress) setProgress(data.progress);
 
-      if (data.status === "complete") {
-        // Show summary then table
-        if (data.summary) {
-          pushMessage({ role: "bot", text: data.summary });
-        }
-        pushMessage({ role: "bot", table: data.data || [] });
-        setSuggestions({});
-        setProgress({ filled: 7, total: 7 });
-      } else {
-        // In progress — show conversational response
+      // ── Trend query ───────────────────────────────────────
+      if (data.status === "intent_handled" && data.intent_type === "trend_query") {
         if (data.response) {
           pushMessage({ role: "bot", text: data.response });
         }
-        // Show suggestions (exclude geography if empty)
+        if (data.trend_data) {
+          pushMessage({ role: "bot", trendData: data.trend_data });
+        }
+        setSuggestions({});
+
+      // ── General / off-topic ───────────────────────────────
+      } else if (data.status === "intent_handled") {
+        if (data.response) pushMessage({ role: "bot", text: data.response });
+        setSuggestions({});
+
+      // ── Lead flow complete ────────────────────────────────
+      } else if (data.status === "complete") {
+        if (data.summary) pushMessage({ role: "bot", text: data.summary });
+        pushMessage({ role: "bot", table: data.leads || data.data || [] });
+        setSuggestions({});
+        setProgress({ filled: 7, total: 7 });
+
+      // ── In progress — collecting context ──────────────────
+      } else {
+        if (data.response) pushMessage({ role: "bot", text: data.response });
         if (data.suggestions) {
           const filtered = {};
           for (const [k, v] of Object.entries(data.suggestions)) {
@@ -200,6 +449,7 @@ export default function Intellegence() {
           setSuggestions(filtered);
         }
       }
+
     } catch (err) {
       console.error(err);
       pushMessage({ role: "bot", text: "Something went wrong connecting to the server. Please try again." });
@@ -207,6 +457,11 @@ export default function Intellegence() {
       setLoading(false);
     }
   }, [input, loading, pushMessage]);
+
+  // Called when user clicks "Target United States" etc. on the TrendCard
+  const handleGeoSelect = useCallback((geography) => {
+    sendMessage(`Use ${geography}`);
+  }, [sendMessage]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -216,7 +471,6 @@ export default function Intellegence() {
   };
 
   const startNewChat = async () => {
-    // Save current chat if non-empty
     if (messages.length > 0) {
       const title = messages.find(m => m.role === "user")?.text?.slice(0, 40) || "Chat";
       setChatHistory(prev => [
@@ -224,7 +478,6 @@ export default function Intellegence() {
         ...prev,
       ]);
     }
-    // Reset backend session
     try {
       await fetch(`${API_BASE}/context/reset`, {
         method: "POST",
@@ -257,10 +510,6 @@ export default function Intellegence() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <div className="logo">
-            {/* <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="#6366f1" opacity="0.9"/>
-              <polygon points="12,6 18,9.5 18,16.5 12,20 6,16.5 6,9.5" fill="none" stroke="#a5b4fc" strokeWidth="1.5"/>
-            </svg> */}
             <span>Delphi</span>
           </div>
           <button className="sidebar-toggle" onClick={() => setSidebarOpen(v => !v)} title="Toggle sidebar">
@@ -272,10 +521,9 @@ export default function Intellegence() {
           <span>＋</span> New Search
         </button>
 
-        {/* Context summary */}
         {filledFields.length > 0 && (
           <div className="context-panel">
-            <div className="context-panel-title ">Context</div>
+            <div className="context-panel-title">Context</div>
             {filledFields.map(f => (
               <ContextPill key={f} field={f} value={context[f]} />
             ))}
@@ -283,7 +531,6 @@ export default function Intellegence() {
           </div>
         )}
 
-        {/* Chat history */}
         <div className="history-list">
           {messages.length > 0 && !activeChatId && (
             <div className="history-item active">
@@ -313,7 +560,6 @@ export default function Intellegence() {
         </div>
       </aside>
 
-      {/* Collapsed toggle */}
       {!sidebarOpen && (
         <button className="sidebar-reopen" onClick={() => setSidebarOpen(true)} title="Open sidebar">
           ›
@@ -323,23 +569,14 @@ export default function Intellegence() {
       {/* ═══ MAIN PANEL ══════════════════════════════════ */}
       <main className="main-panel">
 
-        {/* Empty state */}
         {messages.length === 0 && (
           <div className="empty-state">
-            {/* <div className="empty-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="#6366f1" opacity="0.15"/>
-                <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="none" stroke="#6366f1" strokeWidth="1.5"/>
-                <circle cx="12" cy="12" r="3" fill="#6366f1" opacity="0.7"/>
-              </svg>
-            </div> */}
-           
             <h1 className="empty-title">Describe your target audience and find the best matching leads</h1>
             <div className="starter-prompts">
               {[
                 "I want to run a campaign targeting C-Level at mid-size tech companies in the US",
                 "Find me marketing leads in the healthcare sector in Europe",
-                "I need sales leads from fintech companies with 500+ employees",
+                "Which region is trending for laptop products?",
               ].map(prompt => (
                 <button key={prompt} className="starter-chip" onClick={() => sendMessage(prompt)}>
                   {prompt}
@@ -349,39 +586,35 @@ export default function Intellegence() {
           </div>
         )}
 
-        {/* Messages */}
         <div className={`messages-area ${messages.length === 0 ? "no-scroll" : ""}`}>
           {messages.map((msg) => (
             <div key={msg.id} className={`message-row ${msg.role}`}>
               {msg.role === "bot" && (
-                <div className="bot-avatar">
-                  {/* <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="#6366f1"/>
-                  </svg> */}
-                </div>
+                <div className="bot-avatar" />
               )}
               <div className="message-content">
                 {msg.text && <div className="bubble">{msg.text}</div>}
                 {msg.table !== undefined && <LeadsTable rows={msg.table} />}
+                {/* ── TREND CARD rendered here ── */}
+                {msg.trendData && (
+                  <TrendCard
+                    data={msg.trendData}
+                    onTargetGeo={handleGeoSelect}
+                  />
+                )}
               </div>
             </div>
           ))}
 
-          {/* Loading */}
           {loading && (
             <div className="message-row bot">
-              <div className="bot-avatar">
-                {/* <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="#6366f1"/>
-                </svg> */}
-              </div>
+              <div className="bot-avatar" />
               <div className="message-content">
                 <div className="bubble"><TypingDots /></div>
               </div>
             </div>
           )}
 
-          {/* Suggestions */}
           {!loading && Object.keys(suggestions).length > 0 && (
             <div className="suggestions-area">
               {Object.entries(suggestions).map(([field, items]) => (

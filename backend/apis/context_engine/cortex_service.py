@@ -70,13 +70,21 @@
 #         print("PARSE ERROR:", str(e))
 #         return []
 
-
 import os
 import requests
-import snowflake.connector
+
+try:
+    import snowflake.connector
+    SNOWFLAKE_AVAILABLE = True
+except ImportError:
+    SNOWFLAKE_AVAILABLE = False
 
 
 def query_cortex_analyst(prompt: str):
+
+    if not SNOWFLAKE_AVAILABLE:
+        print("Snowflake connector not installed")
+        return []
 
     conn = snowflake.connector.connect(
         user=os.getenv("SNOWFLAKE_USER"),
@@ -89,7 +97,6 @@ def query_cortex_analyst(prompt: str):
     )
 
     try:
-
         # Get fresh token from ACTIVE session
         token = conn.rest.token
         account = os.getenv("SNOWFLAKE_ACCOUNT")
@@ -126,21 +133,17 @@ def query_cortex_analyst(prompt: str):
 
         print("RAW CORTEX RESPONSE:", data)
 
-        # -----------------------------------
-        # HANDLE CORTEX ERRORS
-        # -----------------------------------
+        # Handle Cortex errors
         if "code" in data:
             print("CORTEX API ERROR:", data.get("message"))
             return []
 
-        # -----------------------------------
-        # EXTRACT GENERATED SQL
-        # -----------------------------------
+        # Extract generated SQL
         sql_query = None
 
-        for item in data["message"]["content"]:
-            if item["type"] == "sql":
-                sql_query = item["statement"]
+        for item in data.get("message", {}).get("content", []):
+            if item.get("type") == "sql":
+                sql_query = item.get("statement")
                 break
 
         if not sql_query:
@@ -150,9 +153,7 @@ def query_cortex_analyst(prompt: str):
         print("GENERATED SQL:")
         print(sql_query)
 
-        # -----------------------------------
-        # EXECUTE SQL IN SNOWFLAKE
-        # -----------------------------------
+        # Execute SQL in Snowflake
         cursor = conn.cursor()
 
         try:
@@ -166,7 +167,7 @@ def query_cortex_analyst(prompt: str):
                 for row in rows
             ]
 
-            print(f"[Cortex] Returned {len(results)} leads")
+            print(f"[Cortex] Returned {len(results)} rows")
 
             return results
 

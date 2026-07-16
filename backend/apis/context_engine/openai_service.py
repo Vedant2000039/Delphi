@@ -48,8 +48,11 @@
 
 # openai_service.py
 import os
+import time
 from openai import OpenAI
 from dotenv import load_dotenv
+
+_quota_exhausted_until = 0  # module-level cooldown timestamp
 
 load_dotenv()
 
@@ -61,6 +64,12 @@ def ask_gpt(prompt: str, temperature: float = 0.7, max_tokens: int = 500) -> str
     Call GPT-4.1-mini with a given prompt.
     Returns the response text, or empty string on failure.
     """
+    global _quota_exhausted_until
+
+    if time.time() < _quota_exhausted_until:
+        # Skip the call entirely while quota is known to be exhausted
+        return ""
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -70,5 +79,8 @@ def ask_gpt(prompt: str, temperature: float = 0.7, max_tokens: int = 500) -> str
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
+        err_str = str(e)
+        if "insufficient_quota" in err_str or "429" in err_str:
+            _quota_exhausted_until = time.time() + 300  # back off 5 minutes
         print(f"[OpenAI Error] {e}")
         return ""
