@@ -1,0 +1,32 @@
+cat > .gitignore << 'EOF'
+# Python - catch ALL __pycache__ anywhere
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+venv/
+.venv/
+backend/.env
+*.csv
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/.cache/
+frontend/.env
+frontend/package-lock.json
+
+# Build
+frontend/build/
+dist/
+
+# Editor / OS
+*.swp
+*~
+.DS_Store
+.vscode/
+.idea/
+EOFbackend/pipeline/
+backend/trend.py
+backend/pipeline/
