@@ -1,40 +1,54 @@
+// frontend/src/components/Onboarding/Register.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import AuthLayout, { useAuthStyles } from "./AuthLayout";
 
-const API_BASE_URL = process.env.REACT_APP_API_DOMAIN;
+const API_BASE_URL = process.env.REACT_APP_API_DOMAIN || "http://localhost:8000";
+
+const getRegisterError = (err) => {
+    const detail = err.response?.data?.detail;
+
+    if (Array.isArray(detail)) {
+        return detail.map((item) => item.msg).filter(Boolean).join(", ");
+    }
+
+    if (typeof detail === "string") return detail;
+    if (err.response?.data?.message) return err.response.data.message;
+    if (err.response?.status) return `Registration failed (${err.response.status}). Please try again.`;
+    if (err.request) return "Could not reach the API server. Make sure the backend is running on http://localhost:8000.";
+
+    return "Registration failed. Please try again.";
+};
 
 export default function Register() {
+    useAuthStyles();
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({
-        first_name:   "",
-        last_name:    "",
-        company_name: "",
-        email:        "",
-        password:     "",
-        confirm_password: ""
-    });
+    const [firstName,   setFirstName]   = useState("");
+    const [lastName,    setLastName]    = useState("");
+    const [companyName, setCompanyName] = useState("");
+    const [email,       setEmail]       = useState("");
+    const [password,    setPassword]    = useState("");
+    const [confirmPwd,  setConfirmPwd]  = useState("");
 
-    const [errors,  setErrors]  = useState({});
-    const [loading, setLoading] = useState(false);
+    const [errors,   setErrors]   = useState({});
+    const [loading,  setLoading]  = useState(false);
     const [apiError, setApiError] = useState("");
+    const [showPass,    setShowPass]    = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setErrors({ ...errors, [e.target.name]: "" });
-    };
+    const clearErr = (key) => setErrors((prev) => ({ ...prev, [key]: "" }));
 
     const validate = () => {
         const e = {};
-        if (!formData.first_name)   e.first_name   = "First name is required";
-        if (!formData.last_name)    e.last_name    = "Last name is required";
-        if (!formData.company_name) e.company_name = "Company name is required";
-        if (!formData.email)        e.email        = "Email is required";
-        if (!formData.password)     e.password     = "Password is required";
-        if (formData.password.length < 6) e.password = "Minimum 6 characters";
-        if (formData.password !== formData.confirm_password)
-            e.confirm_password = "Passwords do not match";
+        if (!firstName.trim())   e.firstName   = "Required";
+        if (!lastName.trim())    e.lastName    = "Required";
+        if (!companyName.trim()) e.companyName = "Required";
+        if (!email.trim())       e.email       = "Required";
+        if (!password)           e.password    = "Required";
+        if (password.length < 6) e.password    = "Min. 6 characters";
+        if (password !== confirmPwd) e.confirmPwd = "Passwords do not match";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -43,146 +57,128 @@ export default function Register() {
         e.preventDefault();
         setApiError("");
         if (!validate()) return;
-
         setLoading(true);
         try {
             await axios.post(`${API_BASE_URL}/auth/register`, {
-                first_name:   formData.first_name,
-                last_name:    formData.last_name,
-                company_name: formData.company_name,
-                email:        formData.email,
-                password:     formData.password
+                first_name:   firstName.trim(),
+                last_name:    lastName.trim(),
+                company_name: companyName.trim(),
+                email:        email.trim(),
+                password,
             });
-
-            // Redirect to OTP page with email
-            navigate("/Otp", { state: { email: formData.email } });
-
+            navigate("/Otp", { state: { email: email.trim() } });
         } catch (err) {
-            setApiError(err.response?.data?.detail || "Registration failed. Please try again.");
+            setApiError(getRegisterError(err));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light py-4">
-            <div className="card shadow-lg border-0 rounded-4 p-4" style={{ maxWidth: "480px", width: "100%" }}>
-                <div className="text-center mb-4">
-                    <div
-                        className="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center shadow-sm"
-                        style={{ width: "60px", height: "60px" }}
-                    >
-                        <i className="bi bi-person-plus fs-3"></i>
-                    </div>
-                    <h3 className="mt-3 fw-bold">Create Account</h3>
-                    <p className="text-muted small">Set up your Delphi AI account</p>
-                </div>
-
-                {apiError && <div className="alert alert-danger py-2">{apiError}</div>}
-
-                <form onSubmit={handleSubmit}>
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <label className="form-label fw-semibold">First Name</label>
-                            <input
-                                type="text"
-                                name="first_name"
-                                className={`form-control ${errors.first_name ? "is-invalid" : ""}`}
-                                placeholder="John"
-                                value={formData.first_name}
-                                onChange={handleChange}
-                            />
-                            {errors.first_name && <div className="invalid-feedback">{errors.first_name}</div>}
-                        </div>
-
-                        <div className="col-md-6">
-                            <label className="form-label fw-semibold">Last Name</label>
-                            <input
-                                type="text"
-                                name="last_name"
-                                className={`form-control ${errors.last_name ? "is-invalid" : ""}`}
-                                placeholder="Doe"
-                                value={formData.last_name}
-                                onChange={handleChange}
-                            />
-                            {errors.last_name && <div className="invalid-feedback">{errors.last_name}</div>}
-                        </div>
-
-                        <div className="col-12">
-                            <label className="form-label fw-semibold">Company Name</label>
-                            <input
-                                type="text"
-                                name="company_name"
-                                className={`form-control ${errors.company_name ? "is-invalid" : ""}`}
-                                placeholder="XTS World"
-                                value={formData.company_name}
-                                onChange={handleChange}
-                            />
-                            {errors.company_name && <div className="invalid-feedback">{errors.company_name}</div>}
-                        </div>
-
-                        <div className="col-12">
-                            <label className="form-label fw-semibold">Work Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                                placeholder="john@company.com"
-                                value={formData.email}
-                                onChange={handleChange}
-                            />
-                            {errors.email && <div className="invalid-feedback">{errors.email}</div>}
-                        </div>
-
-                        <div className="col-12">
-                            <label className="form-label fw-semibold">Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                                placeholder="Min. 6 characters"
-                                value={formData.password}
-                                onChange={handleChange}
-                            />
-                            {errors.password && <div className="invalid-feedback">{errors.password}</div>}
-                        </div>
-
-                        <div className="col-12">
-                            <label className="form-label fw-semibold">Confirm Password</label>
-                            <input
-                                type="password"
-                                name="confirm_password"
-                                className={`form-control ${errors.confirm_password ? "is-invalid" : ""}`}
-                                placeholder="Re-enter password"
-                                value={formData.confirm_password}
-                                onChange={handleChange}
-                            />
-                            {errors.confirm_password && <div className="invalid-feedback">{errors.confirm_password}</div>}
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary w-100 mt-4 fw-semibold"
-                        disabled={loading}
-                    >
-                        {loading
-                            ? <span className="spinner-border spinner-border-sm me-2"></span>
-                            : <i className="bi bi-check-circle me-2"></i>
-                        }
-                        {loading ? "Creating account..." : "Create Account & Send OTP"}
-                    </button>
-                </form>
-
-                <div className="text-center mt-3">
-                    <button
-                        onClick={() => navigate("/")}
-                        className="btn btn-link text-decoration-none small text-primary p-0"
-                    >
-                        Already have an account? Login
-                    </button>
-                </div>
+        <AuthLayout page="register">
+            <div className="dp-form-head">
+                <h2>Create account</h2>
+                <p>Set up your account</p>
             </div>
-        </div>
+
+            {apiError && <div className="dp-alert dp-alert-error">{apiError}</div>}
+
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+                {/* Name row */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <div>
+                        <label className="dp-label">First Name</label>
+                        <input
+                            type="text"
+                            className={`dp-input${errors.firstName ? " err" : ""}`}
+                            placeholder="John"
+                            value={firstName}
+                            onChange={(e) => { setFirstName(e.target.value); clearErr("firstName"); }}
+                        />
+                        {errors.firstName && <div className="dp-field-error">{errors.firstName}</div>}
+                    </div>
+                    <div>
+                        <label className="dp-label">Last Name</label>
+                        <input
+                            type="text"
+                            className={`dp-input${errors.lastName ? " err" : ""}`}
+                            placeholder="Doe"
+                            value={lastName}
+                            onChange={(e) => { setLastName(e.target.value); clearErr("lastName"); }}
+                        />
+                        {errors.lastName && <div className="dp-field-error">{errors.lastName}</div>}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="dp-label">Company Name</label>
+                    <input
+                        type="text"
+                        className={`dp-input${errors.companyName ? " err" : ""}`}
+                        placeholder="XTS World Pvt Ltd"
+                        value={companyName}
+                        onChange={(e) => { setCompanyName(e.target.value); clearErr("companyName"); }}
+                    />
+                    {errors.companyName && <div className="dp-field-error">{errors.companyName}</div>}
+                </div>
+
+                <div>
+                    <label className="dp-label">Work Email</label>
+                    <input
+                        type="email"
+                        className={`dp-input${errors.email ? " err" : ""}`}
+                        placeholder="john@company.com"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); clearErr("email"); }}
+                    />
+                    {errors.email && <div className="dp-field-error">{errors.email}</div>}
+                </div>
+
+                <div>
+                    <label className="dp-label">Password</label>
+                    <div className="dp-pass-wrap">
+                        <input
+                            type={showPass ? "text" : "password"}
+                            className={`dp-input${errors.password ? " err" : ""}`}
+                            placeholder="Min. 6 characters"
+                            value={password}
+                            onChange={(e) => { setPassword(e.target.value); clearErr("password"); }}
+                        />
+                        <button type="button" className="dp-eye-btn" onClick={() => setShowPass(!showPass)} tabIndex={-1}>
+                            {showPass ? "●" : "○"}
+                        </button>
+                    </div>
+                    {errors.password && <div className="dp-field-error">{errors.password}</div>}
+                </div>
+
+                <div>
+                    <label className="dp-label">Confirm Password</label>
+                    <div className="dp-pass-wrap">
+                        <input
+                            type={showConfirm ? "text" : "password"}
+                            className={`dp-input${errors.confirmPwd ? " err" : ""}`}
+                            placeholder="Re-enter password"
+                            value={confirmPwd}
+                            onChange={(e) => { setConfirmPwd(e.target.value); clearErr("confirmPwd"); }}
+                        />
+                        <button type="button" className="dp-eye-btn" onClick={() => setShowConfirm(!showConfirm)} tabIndex={-1}>
+                            {showConfirm ? "●" : "○"}
+                        </button>
+                    </div>
+                    {errors.confirmPwd && <div className="dp-field-error">{errors.confirmPwd}</div>}
+                </div>
+
+                <button type="submit" className="dp-btn dp-btn-primary" disabled={loading} style={{ marginTop: 4 }}>
+                    {loading ? <><div className="dp-spin" /> Creating account...</> : "Create Account & Send OTP"}
+                </button>
+            </form>
+
+            <div className="dp-divider">already a member?</div>
+
+            <div style={{ textAlign: "center", fontSize: 14, color: "var(--dp-muted)" }}>
+                <button className="dp-link" onClick={() => navigate("/")}>Sign in to your account</button>
+            </div>
+        </AuthLayout>
     );
 }

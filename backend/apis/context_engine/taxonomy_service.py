@@ -42,10 +42,10 @@ def get_industries():
 def get_industry_domains():
 
     query = """
-        SELECT DISTINCT sector
+        SELECT DISTINCT domain
         FROM mst_industry_taxonomy
-        WHERE sector IS NOT NULL
-        ORDER BY sector
+        WHERE domain IS NOT NULL
+        ORDER BY domain
     """
 
     return fetch_column_values(query)
@@ -57,10 +57,10 @@ def get_industry_domains():
 def get_industry_domains_by_industry(industry):
 
     query = """
-        SELECT DISTINCT sector
+        SELECT DISTINCT industry
         FROM mst_industry_taxonomy
         WHERE industry = %s
-        AND sector IS NOT NULL
+        AND secto IS NOT NULL
         ORDER BY sector
     """
 

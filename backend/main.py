@@ -25,8 +25,12 @@ from apis.Persona.ScoreConfig     import router as persona_router
 from apis.Persona.GeneratePersona import router as generate_persona_router
 from apis.Authentication          import router as auth_router
 from apis.Onboarding              import router as onboarding_router
-from apis.Intellegence.intellegece import router as intellegence_router
+
 from apis.context_engine.routes   import router as context_router
+from apis.Onboarding import router as onboarding_router
+
+from apis.Intellegence.product_context import router as product_context_router
+
 
 load_dotenv()
 
@@ -53,10 +57,15 @@ app.include_router(generate_persona_router, prefix="/leadscores/persona")
 app.include_router(auth_router)
 app.include_router(onboarding_router)
 
-app.include_router(intellegence_router)
+
 
 
 app.include_router(context_router)
+
+app.include_router(onboarding_router)
+
+
+app.include_router(product_context_router)
 
 @app.get("/health")
 def health():

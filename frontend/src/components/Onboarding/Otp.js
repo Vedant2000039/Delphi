@@ -1,3 +1,4 @@
+// frontend/src/components/Onboarding/Otp.js
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";

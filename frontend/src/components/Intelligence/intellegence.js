@@ -63,7 +63,6 @@ function parseLeadText(text) {
     ["Employee Size", /Employee[_ ](?:size|count)?:\s*([^.]+)\./i],
     ["Revenue",       /Revenue[_ ]range:\s*([^.]+)\./i],
     ["Geography",     /Geography:\s*([^.]+)\./i],
-    ["Domain",        /(?:domain|sector):\s*([^.]+)\./i],
   ];
   for (const [key, rx] of pairs) {
     const m = text.match(rx);
@@ -334,6 +333,177 @@ function SidebarPanel({ title, children, defaultOpen = true }) {
   );
 }
 
+// ── Icon set (line icons, no emoji) ─────────────────────────────────────────
+const Icon = {
+  Tag: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M20.59 13.41L13.41 20.59a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="7" cy="7" r="1.3" fill="currentColor"/>
+    </svg>
+  ),
+  Compass: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
+      <path d="M15.5 8.5l-2 5-5 2 2-5 5-2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Clock: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/>
+      <path d="M12 7v5l3.5 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Target: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.6"/>
+      <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+    </svg>
+  ),
+  Users: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      <circle cx="17" cy="9" r="2.4" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M15.2 14.3c2.4.2 4.3 2 4.3 4.7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+    </svg>
+  ),
+  Bulb: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M9 18h6M10 21h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+      <path d="M12 3a6.5 6.5 0 0 0-4 11.6c.6.5 1 1.2 1 2v.4h6v-.4c0-.8.4-1.5 1-2A6.5 6.5 0 0 0 12 3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+    </svg>
+  ),
+  Trend: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M3 17l6-6 4 4 8-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M15 7h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+};
+
+// ── Sidebar Section Card (base) ─────────────────────────────────────────────
+function SectionCard({ icon, title, subtitle, onClick, active }) {
+  return (
+    <button className={`section-card ${active ? "active" : ""}`} onClick={onClick}>
+      <div className="section-card-icon">{icon}</div>
+      <div className="section-card-body">
+        <span className="section-card-title">{title}</span>
+        <span className="section-card-subtitle">{subtitle}</span>
+      </div>
+      <span className="section-card-arrow">›</span>
+    </button>
+  );
+}
+
+// ── Dedicated sidebar cards ─────────────────────────────────────────────────
+function ProductServicesCard({ subtitle, active, onClick }) {
+  return (
+    <SectionCard
+      icon={<Icon.Tag />}
+      title="Product / Services"
+      subtitle={subtitle || "Not set — tap to select"}
+      active={active}
+      onClick={onClick}
+    />
+  );
+}
+
+function ContextCard({ hasAnyContext, overallPct, active, onClick }) {
+  return (
+    <SectionCard
+      icon={<Icon.Compass />}
+      title="Context"
+      subtitle={hasAnyContext ? `${overallPct}% complete` : "No context yet"}
+      active={active}
+      onClick={onClick}
+    />
+  );
+}
+
+function SearchHistoryCard({ chatHistory, active, onClick }) {
+  return (
+    <SectionCard
+      icon={<Icon.Clock />}
+      title="Search History"
+      subtitle={chatHistory.length > 0 ? `${chatHistory.length} past searches` : "No history yet"}
+      active={active}
+      onClick={onClick}
+    />
+  );
+}
+
+// ── Middle Action Card (base) ───────────────────────────────────────────────
+function ActionCard({ icon, title, description, onClick, disabled }) {
+  return (
+    <button className="action-card" onClick={onClick} disabled={disabled}>
+      <div className="action-card-icon">{icon}</div>
+      <div className="action-card-title">{title}</div>
+      <div className="action-card-desc">{description}</div>
+    </button>
+  );
+}
+
+// ── Dedicated middle cards ──────────────────────────────────────────────────
+function CreateICPCard({ productName, onClick }) {
+  return (
+    <ActionCard
+      icon={<Icon.Target />}
+      title={`Create ICP${productName ? ` for ${productName}` : ""}`}
+      description="Build your ideal customer profile"
+      onClick={onClick}
+    />
+  );
+}
+
+function DiscoverBuyerGroupCard({ onClick }) {
+  return (
+    <ActionCard
+      icon={<Icon.Users />}
+      title="Discover Buyer Group"
+      description="Map the decision makers involved"
+      onClick={onClick}
+    />
+  );
+}
+
+function InsightsCard({ onClick }) {
+  return (
+    <ActionCard
+      icon={<Icon.Bulb />}
+      title="Insights"
+      description="Surface key signals about your market"
+      onClick={onClick}
+    />
+  );
+}
+
+function CurrentTrendCard({ onClick }) {
+  return (
+    <ActionCard
+      icon={<Icon.Trend />}
+      title="Current Trend"
+      description="See what's trending in your space"
+      onClick={onClick}
+    />
+  );
+}
+
+// ── Simple Modal Wrapper ─────────────────────────────────────────────────────
+function Modal({ title, onClose, children, wide }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className={`modal-panel ${wide ? "wide" : ""}`} onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">{title}</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Context Pill ─────────────────────────────────────────────────────────────
 function ContextPill({ label, value }) {
   return (
@@ -399,6 +569,48 @@ function PhaseBadge({ phase }) {
   );
 }
 
+// ── Editable Tag List (for Context modal: geography/industry/category/domain) ─
+function EditableTagList({ values, onChange }) {
+  const [draft, setDraft] = useState("");
+
+  const addTag = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...(values || []), v]);
+    setDraft("");
+  };
+
+  const removeTag = idx => {
+    onChange((values || []).filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div>
+      <div className="suggestion-chips">
+        {(values || []).length === 0 && (
+          <span className="lt-cell-dash">No values selected</span>
+        )}
+        {(values || []).map((v, i) => (
+          <button key={`${v}-${i}`} className="chip" onClick={() => removeTag(i)}>
+            {v} ✕
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <input
+          className="modal-textarea"
+          style={{ flex: 1, minHeight: "auto" }}
+          value={draft}
+          placeholder="Add value and press Enter..."
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+        />
+        <button className="modal-btn modal-btn-primary" onClick={addTag}>Add</button>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
@@ -417,9 +629,39 @@ export default function Intellegence() {
     return localStorage.getItem("delphi-theme") === "dark";
   });
 
+  // Section modal state: which sidebar card is expanded ("product" | "context" | "history" | null)
+  const [activeSection,   setActiveSection]   = useState(null);
+
+  // ── Product/Service selection (fetched from delphi_company_profiles) ──────
+  const [productItems,     setProductItems]     = useState([]);
+  const [selectedProduct,  setSelectedProduct]  = useState(null);
+  const [productsLoading,  setProductsLoading]  = useState(false);
+
+  // ── Targeting context (delphi_context_builder_user_selections) ────────────
+  const [userContext,      setUserContext]      = useState(null);
+  const [contextLoading,   setContextLoading]   = useState(false);
+
+  // ── ICP generation ──────────────────────────────────────────────────────────
+  const [icpModalOpen, setIcpModalOpen] = useState(false);
+  const [icpLoading,   setIcpLoading]   = useState(false);
+  const [icpData,      setIcpData]      = useState(null);
+  const [icpForm,       setIcpForm]     = useState({ country_id: "", industry_id: "", brand_id: "" });
+
   const bottomRef   = useRef(null);
   const textareaRef = useRef(null);
   const sessionRef  = useRef(SESSION_ID);
+
+  // Load user info from localStorage
+  const user = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
+  }, []);
+
+  const USER_ID = user.user_id || user.id;
+
+  const userInitials = useMemo(() => {
+    const name = user.full_name || user.email || "D";
+    return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  }, [user]);
 
   // Apply theme to document root
   useEffect(() => {
@@ -446,19 +688,88 @@ export default function Intellegence() {
     ta.style.height = Math.min(ta.scrollHeight, 140) + "px";
   }, [input]);
 
-  // Load user info from localStorage
-  const user = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
-  }, []);
-
-  const userInitials = useMemo(() => {
-    const name = user.full_name || user.email || "D";
-    return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  }, [user]);
-
   const pushMessage = useCallback(msg => {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), ...msg }]);
   }, []);
+
+  // ── Fetch product/service list + current selection ────────────────────────
+  const fetchProducts = useCallback(async () => {
+    if (!USER_ID) return;
+    setProductsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/profile/products/${USER_ID}`);
+      const data = await res.json();
+      setProductItems(data.items || []);
+      setSelectedProduct(data.selected || null);
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [USER_ID]);
+
+  // ── Fetch targeting context (geographies/industries/categories/domains) ───
+  const fetchUserContext = useCallback(async () => {
+    if (!USER_ID) return;
+    setContextLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/profile/context/${USER_ID}`);
+      const data = await res.json();
+      setUserContext(data.context || null);
+    } catch (err) {
+      console.error("Failed to fetch context:", err);
+    } finally {
+      setContextLoading(false);
+    }
+  }, [USER_ID]);
+
+  useEffect(() => {
+    if (USER_ID) {
+      fetchProducts();
+      fetchUserContext();
+    }
+  }, [USER_ID, fetchProducts, fetchUserContext]);
+
+  // ── Select a product/service (sets flag in DB) ─────────────────────────────
+  const selectProduct = async (item) => {
+    try {
+      await fetch(`${API_BASE}/profile/products/select`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: USER_ID,
+          profile_id: item.profile_id,
+          value: item.value,
+          type: item.type,
+        }),
+      });
+      setSelectedProduct({ ...item, selected: true });
+      setProductItems(prev =>
+        prev.map(i => ({
+          ...i,
+          selected: i.value === item.value && i.profile_id === item.profile_id,
+        }))
+      );
+    } catch (err) {
+      console.error("Failed to select product:", err);
+    } finally {
+      setActiveSection(null);
+    }
+  };
+
+  // ── Update targeting context field (geography/industry/category/domain) ───
+  const updateContextField = async (field, values) => {
+    try {
+      await fetch(`${API_BASE}/profile/context/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: USER_ID, [field]: values }),
+      });
+      setUserContext(prev => ({ ...(prev || {}), [field]: values }));
+    } catch (err) {
+      console.error("Failed to update context:", err);
+    }
+  };
 
   const sendMessage = useCallback(async (text) => {
     const finalText = (text || input).trim();
@@ -543,6 +854,31 @@ export default function Intellegence() {
     setContext(chat.context || {});
     setSuggestions({});
     setActiveChatId(chat.id);
+    setActiveSection(null);
+  };
+
+  // ── ICP generation ──────────────────────────────────────────────────────────
+  const runICP = async () => {
+    setIcpLoading(true);
+    setIcpData(null);
+    try {
+      const res = await fetch(`${API_BASE}/icp/generate-insight`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product: selectedProduct?.value || context.product_name || context.product_description,
+          country_id: icpForm.country_id,
+          industry_id: icpForm.industry_id,
+          brand_id: icpForm.brand_id,
+        }),
+      });
+      const data = await res.json();
+      setIcpData(data.insight);
+    } catch (err) {
+      console.error("ICP generation failed:", err);
+    } finally {
+      setIcpLoading(false);
+    }
   };
 
   const filledProductFields   = PRODUCT_FIELD_ORDER.filter(f => context[f]);
@@ -551,6 +887,13 @@ export default function Intellegence() {
   const hasAnyContext         = totalFilled > 0;
 
   const overallPct = Math.round((totalFilled / ALL_FIELDS.length) * 100);
+
+  const contextFieldsMap = [
+    { key: "geographies", label: "Geographies" },
+    { key: "industries",  label: "Industries" },
+    { key: "categories",  label: "Categories" },
+    { key: "domains",     label: "Domains" },
+  ];
 
   return (
     <div className={`app-shell ${sidebarOpen ? "sidebar-open" : ""}`}>
@@ -579,54 +922,24 @@ export default function Intellegence() {
         {/* Phase */}
         <PhaseBadge phase={phase} />
 
-        {/* Context panels */}
+        {/* Section cards */}
         <div className="sidebar-context-scroll">
-          {filledProductFields.length > 0 && (
-            <SidebarPanel title="Product & Campaign" defaultOpen>
-              {filledProductFields.map(f => (
-                <ContextPill key={f} label={PRODUCT_FIELD_LABELS[f]} value={context[f]} />
-              ))}
-            </SidebarPanel>
-          )}
-
-          {filledTargetingFields.length > 0 && (
-            <SidebarPanel title="Audience Context" defaultOpen>
-              {filledTargetingFields.map(f => (
-                <ContextPill key={f} label={TARGETING_FIELD_LABELS[f]} value={context[f]} />
-              ))}
-            </SidebarPanel>
-          )}
-
-          {hasAnyContext && (
-            <div className="overall-progress">
-              <span className="overall-label">Profile complete</span>
-              <ProgressBar filled={totalFilled} total={ALL_FIELDS.length} />
-            </div>
-          )}
-        </div>
-
-        {/* History */}
-        {(chatHistory.length > 0 || messages.length > 0) && (
-          <div className="history-section-label">Recent searches</div>
-        )}
-        <div className="history-list">
-          {messages.length > 0 && !activeChatId && (
-            <div className="history-item active">
-              {messages.find(m => m.role === "user")?.text?.slice(0, 38) || "Current search"}
-            </div>
-          )}
-          {chatHistory.map(chat => (
-            <div
-              key={chat.id}
-              className={`history-item ${activeChatId === chat.id ? "active" : ""}`}
-              onClick={() => loadChat(chat)}
-            >
-              {chat.title}
-            </div>
-          ))}
-          {chatHistory.length === 0 && messages.length === 0 && (
-            <p className="history-empty">Your searches will appear here</p>
-          )}
+          <ProductServicesCard
+            subtitle={selectedProduct?.value}
+            active={activeSection === "product"}
+            onClick={() => setActiveSection("product")}
+          />
+          <ContextCard
+            hasAnyContext={hasAnyContext}
+            overallPct={overallPct}
+            active={activeSection === "context"}
+            onClick={() => setActiveSection("context")}
+          />
+          <SearchHistoryCard
+            chatHistory={chatHistory}
+            active={activeSection === "history"}
+            onClick={() => setActiveSection("history")}
+          />
         </div>
 
         {/* Footer */}
@@ -647,6 +960,169 @@ export default function Intellegence() {
         </div>
       </aside>
 
+      {/* ══ SECTION MODALS ══════════════════════════════════════ */}
+
+      {/* PRODUCT / SERVICE MODAL */}
+      {activeSection === "product" && (
+        <Modal title="Product / Services" onClose={() => setActiveSection(null)}>
+          <p className="modal-hint">
+            These are the products, services, and brands detected for your account.
+            Select one to make it the active context for searches and ICP generation.
+          </p>
+          <label className="modal-label">Currently Selected</label>
+          <div className="modal-current-value">
+            {selectedProduct?.value || "No product selected yet"}
+          </div>
+          <label className="modal-label">Choose one</label>
+          {productsLoading && <p className="history-empty">Loading products...</p>}
+          <div className="suggestion-chips">
+            {productItems.map(item => (
+              <button
+                key={`${item.profile_id}-${item.type}-${item.value}`}
+                className={`chip ${item.selected ? "chip-active" : ""}`}
+                onClick={() => selectProduct(item)}
+              >
+                {item.value} <span className="chip-type">({item.type})</span>
+              </button>
+            ))}
+            {!productsLoading && productItems.length === 0 && (
+              <p className="history-empty">No products/services found.</p>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* CONTEXT MODAL (geography/industry/category/domain) */}
+      {activeSection === "context" && (
+        <Modal title="Context" onClose={() => setActiveSection(null)} wide>
+          <p className="modal-hint">
+            The targeting context saved for your account. Add or remove values below —
+            changes are saved automatically.
+          </p>
+          {contextLoading && <p className="history-empty">Loading context...</p>}
+          {!contextLoading && contextFieldsMap.map(({ key, label }) => (
+            <SidebarPanel key={key} title={label} defaultOpen>
+              <EditableTagList
+                values={userContext?.[key] || []}
+                onChange={vals => updateContextField(key, vals)}
+              />
+            </SidebarPanel>
+          ))}
+
+          {hasAnyContext && (
+            <div className="overall-progress">
+              <span className="overall-label">Profile complete</span>
+              <ProgressBar filled={totalFilled} total={ALL_FIELDS.length} />
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {activeSection === "history" && (
+        <Modal title="Search History" onClose={() => setActiveSection(null)}>
+          <div className="history-list history-list-modal">
+            {messages.length > 0 && !activeChatId && (
+              <div className="history-item active" onClick={() => setActiveSection(null)}>
+                {messages.find(m => m.role === "user")?.text?.slice(0, 48) || "Current search"}
+              </div>
+            )}
+            {chatHistory.map(chat => (
+              <div
+                key={chat.id}
+                className={`history-item ${activeChatId === chat.id ? "active" : ""}`}
+                onClick={() => loadChat(chat)}
+              >
+                {chat.title}
+              </div>
+            ))}
+            {chatHistory.length === 0 && messages.length === 0 && (
+              <p className="history-empty">Your searches will appear here</p>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* ICP MODAL */}
+      {icpModalOpen && (
+        <Modal
+          title="Create ICP"
+          onClose={() => { setIcpModalOpen(false); setIcpData(null); }}
+          wide
+        >
+          {!icpData && (
+            <>
+              <label className="modal-label">Product</label>
+              <div className="modal-current-value">
+                {selectedProduct?.value || context.product_name || "No product selected"}
+              </div>
+              <label className="modal-label">Country ID</label>
+              <input
+                className="modal-textarea"
+                value={icpForm.country_id}
+                onChange={e => setIcpForm(f => ({ ...f, country_id: e.target.value }))}
+              />
+              <label className="modal-label">Industry ID</label>
+              <input
+                className="modal-textarea"
+                value={icpForm.industry_id}
+                onChange={e => setIcpForm(f => ({ ...f, industry_id: e.target.value }))}
+              />
+              <label className="modal-label">Brand ID</label>
+              <input
+                className="modal-textarea"
+                value={icpForm.brand_id}
+                onChange={e => setIcpForm(f => ({ ...f, brand_id: e.target.value }))}
+              />
+              <div className="modal-actions">
+                <button
+                  className="modal-btn modal-btn-primary"
+                  disabled={icpLoading}
+                  onClick={runICP}
+                >
+                  {icpLoading ? "Generating..." : "Generate ICP"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {icpData && (
+            <div className="icp-result">
+              <p className="modal-hint">{icpData.icp_summary}</p>
+
+              <SidebarPanel title="Top Industries" defaultOpen>
+                {icpData.top_industries?.map(i => (
+                  <ContextPill key={i.name} label={i.name} value={i.score} />
+                ))}
+              </SidebarPanel>
+
+              <SidebarPanel title="Top Job Titles" defaultOpen>
+                {icpData.top_job_titles?.map(j => (
+                  <ContextPill key={j.title} label={j.title} value={j.score} />
+                ))}
+              </SidebarPanel>
+
+              <SidebarPanel title="Firmographics" defaultOpen>
+                <ContextPill label="Employee Size" value={icpData.firmographics?.employee_size} />
+                <ContextPill label="Revenue Range" value={icpData.firmographics?.revenue_range} />
+                <ContextPill label="Geography" value={icpData.firmographics?.geography} />
+              </SidebarPanel>
+
+              <SidebarPanel title="Next Steps" defaultOpen>
+                <ul>
+                  {icpData.recommended_next_steps?.map((s, i) => <li key={i}>{s}</li>)}
+                </ul>
+              </SidebarPanel>
+
+              <div className="modal-actions">
+                <button className="modal-btn modal-btn-secondary" onClick={() => setIcpData(null)}>
+                  Regenerate
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
       {/* Collapsed toggle */}
       {!sidebarOpen && (
         <button
@@ -659,30 +1135,22 @@ export default function Intellegence() {
       {/* ══ MAIN PANEL ═══════════════════════════════════════════ */}
       <main className="main-panel">
 
-        {/* Empty state */}
-        {messages.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-eyebrow">B2B Lead Intelligence</div>
-            <h1 className="empty-title">
-              Find your <em>ideal leads</em> with a simple conversation
-            </h1>
-            <p className="empty-subtitle">
-              Describe your product, campaign goals, and target audience.
-              Delphi will match you with the best leads from the database.
-            </p>
-            <div className="starter-prompts">
-              {[
-                "I want to run a campaign targeting C-Level at mid-size Manufacturing companies in the United States",
-                "Find me marketing leads in the agriculture and mining industry from India",
-                "I need sales leads from Healthcare companies with 500+ employees from Australia",
-              ].map(prompt => (
-                <button key={prompt} className="starter-chip" onClick={() => sendMessage(prompt)}>
-                  {prompt}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Quick action cards */}
+        <div className="action-cards-grid">
+          <CreateICPCard
+            productName={selectedProduct?.value || context.product_name}
+            onClick={() => setIcpModalOpen(true)}
+          />
+          <DiscoverBuyerGroupCard
+            onClick={() => sendMessage("Help me discover the buyer group for my target accounts")}
+          />
+          <InsightsCard
+            onClick={() => sendMessage("Give me insights about my target market")}
+          />
+          <CurrentTrendCard
+            onClick={() => sendMessage("What are the current trends relevant to my product?")}
+          />
+        </div>
 
         {/* Messages */}
         <div className={`messages-area ${messages.length === 0 ? "no-scroll" : ""}`}>

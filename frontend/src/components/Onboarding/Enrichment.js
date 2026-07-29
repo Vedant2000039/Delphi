@@ -1,203 +1,431 @@
+// // frontend/src/components/Onboarding/Enrichment.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Zap, Search, Loader2, Save, CheckCircle, AlertCircle, X, Plus } from "lucide-react";
+import {
+    Zap,
+    Search,
+    Loader2,
+    Save,
+    CheckCircle,
+    AlertCircle,
+    X,
+    Plus,
+} from "lucide-react";
 import axios from "axios";
 
 const API_BASE_URL = process.env.REACT_APP_API_DOMAIN;
-// ── Step indicator ────────────────────────────────────
+
+const INDUSTRY_OPTIONS = [
+    "Agriculture & Mining",
+    "Airlines & Aviation",
+    "Banking",
+    "Biotechnology",
+    "Business Services",
+    "Chemicals",
+    "Computers & Electronics",
+    "Consulting",
+    "Consumer Services",
+    "Defense & Space",
+    "Education - Higher Education",
+    "Education - Primary & Secondary",
+    "Energy & Utilities",
+    "Financial",
+    "Food & Beverages",
+    "Government - Federal / National",
+    "Government - Local",
+    "Government - State / Provincial",
+    "Healthcare",
+    "High Tech",
+    "Insurance",
+    "Life Sciences",
+    "Manufacturing",
+    "Marketing & Advertising",
+    "Media & Entertainment",
+    "Nonprofit",
+    "Real Estate & Construction",
+    "Retail",
+    "Software & Internet",
+    "Telecommunications",
+    "Transportation & Storage",
+    "Travel, Recreation & Leisure",
+    "Wholesale & Distribution",
+    "Education",
+    "Accounting",
+    "Financial Services",
+];
+
+//────────────────────────────────────────────────────────────
+
 function StepIndicator({ step }) {
     return (
         <div className="d-flex align-items-center justify-content-center gap-2 mb-4">
-            <div className={`d-flex align-items-center justify-content-center rounded-circle fw-bold`}
+
+            <div
+                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
                 style={{
-                    width: 32, height: 32,
+                    width: 32,
+                    height: 32,
                     background: step >= 1 ? "#3b82f6" : "#e5e7eb",
                     color: step >= 1 ? "#fff" : "#6b7280",
                     fontSize: 14,
-                }}>
+                }}
+            >
                 {step > 1 ? <CheckCircle size={16} /> : "1"}
             </div>
-            <div style={{ width: 48, height: 2, background: step >= 2 ? "#3b82f6" : "#e5e7eb" }} />
-            <div className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+
+            <div
                 style={{
-                    width: 32, height: 32,
+                    width: 48,
+                    height: 2,
+                    background: step >= 2 ? "#3b82f6" : "#e5e7eb",
+                }}
+            />
+
+            <div
+                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+                style={{
+                    width: 32,
+                    height: 32,
                     background: step >= 2 ? "#3b82f6" : "#e5e7eb",
                     color: step >= 2 ? "#fff" : "#6b7280",
                     fontSize: 14,
-                }}>
+                }}
+            >
                 2
             </div>
-            <div style={{ width: 48, height: 2, background: "#e5e7eb" }} />
-            <div className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+
+            <div
                 style={{
-                    width: 32, height: 32,
+                    width: 48,
+                    height: 2,
+                    background: "#e5e7eb",
+                }}
+            />
+
+            <div
+                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+                style={{
+                    width: 32,
+                    height: 32,
                     background: "#e5e7eb",
                     color: "#6b7280",
                     fontSize: 14,
-                }}>
+                }}
+            >
                 3
             </div>
+
         </div>
     );
 }
 
+//────────────────────────────────────────────────────────────
+
 export default function Enrichment() {
+
     const navigate = useNavigate();
 
-    // ── Step 1: manual form ──
     const [step, setStep] = useState(1);
 
+    // STEP 1
+
     const [form, setForm] = useState({
-        company_name:  "",
-        company_size:  "",
-        headquarters:  "",
-        type:          "",
-        founded:       "",
-        revenue_size:  "",
-        specialties:   "",
+        company_name: "",
+        industry: "",
+        linkedin_url: "",
+        company_size: "",
+        headquarters: "",
+        type: "",
+        company_type: "",
+        founded: "",
+        revenue_size: "",
+        specialties: "",
     });
+
     const [formErrors, setFormErrors] = useState({});
 
-    // ── Step 2: website + brands ──
-    const [websiteInput,  setWebsiteInput]  = useState("");
-    const [isEnriching,   setIsEnriching]   = useState(false);
-    const [enriched,      setEnriched]      = useState(false);
-    const [scrapedOk,     setScrapedOk]     = useState(false);
-    const [websiteUrl,    setWebsiteUrl]     = useState("");
-    const [brands,        setBrands]         = useState([]);  // array of strings
-    const [brandInput,    setBrandInput]     = useState("");
-    const [enrichError,   setEnrichError]   = useState("");
+    // STEP 2
 
-    // ── Step 3: save ──
-    const [isSaving,  setIsSaving]  = useState(false);
+    const [websiteInput, setWebsiteInput] = useState("");
+
+    const [isEnriching, setIsEnriching] = useState(false);
+
+    const [enriched, setEnriched] = useState(false);
+
+    const [scrapedOk, setScrapedOk] = useState(false);
+
+    const [websiteUrl, setWebsiteUrl] = useState("");
+
+    const [brands, setBrands] = useState([]);
+
+    const [services, setServices] = useState([]);
+
+    const [brandInput, setBrandInput] = useState("");
+
+    const [serviceInput, setServiceInput] = useState("");
+
+    const [enrichError, setEnrichError] = useState("");
+
+    // STEP 3
+
+    const [isSaving, setIsSaving] = useState(false);
+
     const [saveError, setSaveError] = useState("");
 
-    // ─────────────────────────────────────────
+    const isServiceCompany =
+        form.company_type.includes("Service");
+
+    //────────────────────────────────────────────
+
     const getUserId = () => {
+
         try {
+
             const user = JSON.parse(localStorage.getItem("user") || "{}");
-            const id   = parseInt(user.user_id);
-            return (!isNaN(id) && id > 0) ? id : null;
-        } catch { return null; }
+
+            const id = parseInt(user.user_id);
+
+            return !isNaN(id) && id > 0 ? id : null;
+
+        } catch {
+
+            return null;
+
+        }
     };
 
-    // ── Step 1: Validate manual form ─────────
+    //────────────────────────────────────────────
+
     const validateForm = () => {
+
         const e = {};
-        if (!form.company_name.trim())  e.company_name  = "Required";
-        if (!form.company_size.trim())  e.company_size  = "Required";
-        if (!form.headquarters.trim())  e.headquarters  = "Required";
-        if (!form.type.trim())          e.type          = "Required";
-        if (!form.revenue_size.trim())  e.revenue_size  = "Required";
+
+        if (!form.company_name.trim())
+            e.company_name = "Required";
+
+        if (!form.industry.trim())
+            e.industry = "Required";
+
+        if (!form.company_size.trim())
+            e.company_size = "Required";
+
+        if (!form.headquarters.trim())
+            e.headquarters = "Required";
+
+        if (!form.type.trim())
+            e.type = "Required";
+
+        if (!form.company_type.trim())
+            e.company_type = "Required";
+
+        if (!form.revenue_size.trim())
+            e.revenue_size = "Required";
+
         setFormErrors(e);
+
         return Object.keys(e).length === 0;
     };
 
     const handleNextStep = () => {
-        if (validateForm()) setStep(2);
+
+        if (validateForm())
+
+            setStep(2);
+
     };
 
-    // ── Step 2: Scrape website ────────────────
+    //────────────────────────────────────────────
+
     const handleEnrich = async () => {
+
         if (!websiteInput.trim()) return;
+
         setEnrichError("");
+
         setScrapedOk(false);
+
         setIsEnriching(true);
+
         setEnriched(false);
+
         setBrands([]);
 
+        setServices([]);
+
         try {
-            const res = await axios.post(`${API_BASE_URL}/onboarding/enrich`, {
-                website_url: websiteInput.trim(),
-                user_id:     getUserId() ?? 0,
-            });
 
-            const { scraped, message, data: d } = res.data;
+            const res = await axios.post(
+                `${API_BASE_URL}/onboarding/enrich`,
+                {
+                    website_url: websiteInput.trim(),
+                    user_id: getUserId() ?? 0,
+                    company_type: form.company_type,
+                }
+            );
 
-            setWebsiteUrl(d.website || websiteInput.trim());
+            const { scraped, message, data } = res.data;
+
+            setWebsiteUrl(data.website || websiteInput.trim());
+
             setScrapedOk(scraped);
 
-            if (scraped && d.brands) {
-                // Convert comma string to array
-                const arr = d.brands
-                    .split(",")
-                    .map(b => b.trim())
-                    .filter(b => b.length > 0);
-                setBrands(arr);
+            if (scraped && data.brands) {
+
+                setBrands(
+                    data.brands
+                        .split(",")
+                        .map((x) => x.trim())
+                        .filter(Boolean)
+                );
+
             }
 
-            if (!scraped && message) {
-                setEnrichError(message);
+            if (scraped && data.services) {
+
+                setServices(
+                    data.services
+                        .split(",")
+                        .map((x) => x.trim())
+                        .filter(Boolean)
+                );
+
             }
+
+            if (!scraped && message)
+
+                setEnrichError(message);
 
             setEnriched(true);
 
         } catch (err) {
+
             setEnrichError(
                 err.response?.data?.detail ||
-                "Could not fetch website. You can add brands manually."
+                "Could not fetch website. You can add items manually."
             );
+
             setWebsiteUrl(websiteInput.trim());
+
             setEnriched(true);
+
         } finally {
+
             setIsEnriching(false);
+
         }
+
     };
 
-    // ── Brand tag helpers ─────────────────────
+    //────────────────────────────────────────────
+
     const addBrand = () => {
+
         const b = brandInput.trim();
-        if (b && !brands.includes(b)) setBrands([...brands, b]);
+
+        if (b && !brands.includes(b))
+
+            setBrands([...brands, b]);
+
         setBrandInput("");
+
     };
 
-    const removeBrand = (b) => setBrands(brands.filter(x => x !== b));
+    const removeBrand = (b) => {
 
-    // ── Save everything ───────────────────────
+        setBrands(brands.filter((x) => x !== b));
+
+    };
+
+    const addService = () => {
+
+        const s = serviceInput.trim();
+
+        if (s && !services.includes(s))
+
+            setServices([...services, s]);
+
+        setServiceInput("");
+
+    };
+
+    const removeService = (s) => {
+
+        setServices(services.filter((x) => x !== s));
+
+    };
+
+    //────────────────────────────────────────────
+
     const handleSave = async () => {
+
         setSaveError("");
 
         const userId = getUserId();
+
         if (!userId) {
-            setSaveError("Session expired. Please register again.");
+
+            setSaveError(
+                "Session expired. Please register again."
+            );
+
             setTimeout(() => navigate("/Onboarding"), 2500);
+
             return;
+
         }
 
         setIsSaving(true);
-        try {
-            await axios.post(`${API_BASE_URL}/onboarding/save-profile`, {
-                user_id:      userId,
-                company_name: form.company_name,
-                company_size: form.company_size,
-                headquarters: form.headquarters,
-                type:         form.type,
-                founded:      form.founded,
-                revenue_size: form.revenue_size,
-                specialties:  form.specialties,
-                website:      websiteUrl,
-                brands:       brands.join(", "),
-            });
 
-            // navigate("/Dashboard");
-             navigate("/Intelligence");
+        try {
+
+            await axios.post(
+                `${API_BASE_URL}/onboarding/save-profile`,
+                {
+                    user_id: userId,
+                    company_name: form.company_name,
+                    industry: form.industry,
+                    linkedin_url: form.linkedin_url,
+                    company_size: form.company_size,
+                    headquarters: form.headquarters,
+                    type: form.type,
+                    company_type: form.company_type,
+                    founded: form.founded,
+                    revenue_size: form.revenue_size,
+                    specialties: form.specialties,
+                    website: websiteUrl,
+
+                    brands: isServiceCompany
+                        ? ""
+                        : brands.join(", "),
+
+                    services: isServiceCompany
+                        ? services.join(", ")
+                        : "",
+                }
+            );
+
+            navigate("/context-builder");
 
         } catch (err) {
+
             setSaveError(
                 err.response?.data?.detail ||
                 "Failed to save. Please try again."
             );
+
         } finally {
+
             setIsSaving(false);
+
         }
+
     };
 
-    // ─────────────────────────────────────────
+    //────────────────────────────────────────────
+
     return (
         <div className="min-vh-100 d-flex align-items-center justify-content-center p-4 bg-light">
             <div style={{ width: "100%", maxWidth: "640px" }}>
-
-                {/* Logo */}
                 <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
                     <div
                         className="rounded-3 bg-primary d-flex align-items-center justify-content-center"
@@ -208,25 +436,58 @@ export default function Enrichment() {
                     <span className="fw-bold fs-5 text-dark">DELPHI AI</span>
                 </div>
 
-                {/* Step Indicator */}
-                <StepIndicator step={step} />
+                <div className="d-flex align-items-center justify-content-center gap-2 mb-4">
+                    <div
+                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+                        style={{
+                            width: 32,
+                            height: 32,
+                            background: step >= 1 ? "#3b82f6" : "#e5e7eb",
+                            color: step >= 1 ? "#fff" : "#6b7280",
+                            fontSize: 14,
+                        }}
+                    >
+                        {step > 1 ? <CheckCircle size={16} /> : "1"}
+                    </div>
+                    <div style={{ width: 48, height: 2, background: step >= 2 ? "#3b82f6" : "#e5e7eb" }} />
+                    <div
+                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+                        style={{
+                            width: 32,
+                            height: 32,
+                            background: step >= 2 ? "#3b82f6" : "#e5e7eb",
+                            color: step >= 2 ? "#fff" : "#6b7280",
+                            fontSize: 14,
+                        }}
+                    >
+                        2
+                    </div>
+                    <div style={{ width: 48, height: 2, background: "#e5e7eb" }} />
+                    <div
+                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
+                        style={{
+                            width: 32,
+                            height: 32,
+                            background: "#e5e7eb",
+                            color: "#6b7280",
+                            fontSize: 14,
+                        }}
+                    >
+                        3
+                    </div>
+                </div>
 
                 <div className="card shadow-lg border-0 rounded-4 p-4">
-
-                    {/* ══ STEP 1: Manual Form ══════════════════════ */}
                     {step === 1 && (
                         <>
                             <div className="mb-4">
-                                <h4 className="fw-bold text-dark mb-1">
-                                    Company Details
-                                </h4>
+                                <h4 className="fw-bold text-dark mb-1">Company Details</h4>
                                 <p className="text-muted small mb-0">
                                     Fill in your company information to get started.
                                 </p>
                             </div>
 
                             <div className="row g-3">
-
                                 <div className="col-12">
                                     <label className="form-label fw-semibold small">
                                         Company Name <span className="text-danger">*</span>
@@ -237,9 +498,26 @@ export default function Enrichment() {
                                         value={form.company_name}
                                         onChange={(e) => setForm({ ...form, company_name: e.target.value })}
                                     />
-                                    {formErrors.company_name && (
-                                        <div className="invalid-feedback">{formErrors.company_name}</div>
-                                    )}
+                                    {formErrors.company_name && <div className="invalid-feedback">{formErrors.company_name}</div>}
+                                </div>
+
+                                <div className="col-12">
+                                    <label className="form-label fw-semibold small">
+                                        Industry <span className="text-danger">*</span>
+                                    </label>
+                                    <select
+                                        className={`form-select ${formErrors.industry ? "is-invalid" : ""}`}
+                                        value={form.industry}
+                                        onChange={(e) => setForm({ ...form, industry: e.target.value })}
+                                    >
+                                        <option value="">Select Industry</option>
+                                        {INDUSTRY_OPTIONS.map((item) => (
+                                            <option key={item} value={item}>
+                                                {item}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {formErrors.industry && <div className="invalid-feedback">{formErrors.industry}</div>}
                                 </div>
 
                                 <div className="col-md-6">
@@ -260,9 +538,7 @@ export default function Enrichment() {
                                         <option>1001–5000 employees</option>
                                         <option>5000+ employees</option>
                                     </select>
-                                    {formErrors.company_size && (
-                                        <div className="invalid-feedback">{formErrors.company_size}</div>
-                                    )}
+                                    {formErrors.company_size && <div className="invalid-feedback">{formErrors.company_size}</div>}
                                 </div>
 
                                 <div className="col-md-6">
@@ -283,9 +559,7 @@ export default function Enrichment() {
                                         <option>$500M – $1B</option>
                                         <option>Over $1B</option>
                                     </select>
-                                    {formErrors.revenue_size && (
-                                        <div className="invalid-feedback">{formErrors.revenue_size}</div>
-                                    )}
+                                    {formErrors.revenue_size && <div className="invalid-feedback">{formErrors.revenue_size}</div>}
                                 </div>
 
                                 <div className="col-md-6">
@@ -298,9 +572,7 @@ export default function Enrichment() {
                                         value={form.headquarters}
                                         onChange={(e) => setForm({ ...form, headquarters: e.target.value })}
                                     />
-                                    {formErrors.headquarters && (
-                                        <div className="invalid-feedback">{formErrors.headquarters}</div>
-                                    )}
+                                    {formErrors.headquarters && <div className="invalid-feedback">{formErrors.headquarters}</div>}
                                 </div>
 
                                 <div className="col-md-6">
@@ -321,9 +593,21 @@ export default function Enrichment() {
                                         <option>Partnership</option>
                                         <option>Sole Proprietorship</option>
                                     </select>
-                                    {formErrors.type && (
-                                        <div className="invalid-feedback">{formErrors.type}</div>
-                                    )}
+                                    {formErrors.type && <div className="invalid-feedback">{formErrors.type}</div>}
+                                </div>
+
+                                <div className="col-md-6">
+                                    <label className="form-label fw-semibold small">Company Type <span className="text-danger">*</span></label>
+                                    <select
+                                        className={`form-select ${formErrors.company_type ? "is-invalid" : ""}`}
+                                        value={form.company_type}
+                                        onChange={(e) => setForm({ ...form, company_type: e.target.value })}
+                                    >
+                                        <option value="">Select type</option>
+                                        <option>Product Based Company</option>
+                                        <option>Service Based Company</option>
+                                    </select>
+                                    {formErrors.company_type && <div className="invalid-feedback">{formErrors.company_type}</div>}
                                 </div>
 
                                 <div className="col-md-6">
@@ -337,6 +621,17 @@ export default function Enrichment() {
                                 </div>
 
                                 <div className="col-12">
+                                    <label className="form-label fw-semibold small">LinkedIn URL</label>
+                                    <input
+                                        type="url"
+                                        className="form-control"
+                                        placeholder="https://www.linkedin.com/company/..."
+                                        value={form.linkedin_url}
+                                        onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="col-12">
                                     <label className="form-label fw-semibold small">Specialties</label>
                                     <input
                                         className="form-control"
@@ -345,32 +640,26 @@ export default function Enrichment() {
                                         onChange={(e) => setForm({ ...form, specialties: e.target.value })}
                                     />
                                 </div>
-
                             </div>
 
-                            <button
-                                className="btn btn-primary w-100 fw-semibold mt-4"
-                                onClick={handleNextStep}
-                            >
+                            <button className="btn btn-primary w-100 fw-semibold mt-4" onClick={handleNextStep}>
                                 Next: Add Company Website →
                             </button>
                         </>
                     )}
 
-                    {/* ══ STEP 2: Website + Brands ═════════════════ */}
                     {step === 2 && (
                         <>
                             <div className="mb-4">
                                 <h4 className="fw-bold text-dark mb-1">
-                                    Detect Brands & Products
+                                    {isServiceCompany ? "Detect Services" : "Detect Brands & Products"}
                                 </h4>
                                 <p className="text-muted small mb-0">
-                                    Enter your company website URL — we'll automatically
-                                    detect your brands, models and products.
+                                    Enter your company website URL — we'll automatically detect{" "}
+                                    {isServiceCompany ? "your services and solutions." : "your brands, models and products."}
                                 </p>
                             </div>
 
-                            {/* Website Input */}
                             <div className="d-flex gap-2 mb-3">
                                 <div className="input-group">
                                     <span className="input-group-text bg-light">
@@ -395,163 +684,153 @@ export default function Enrichment() {
                                 </button>
                             </div>
 
-                            {/* Loading */}
                             {isEnriching && (
                                 <div className="text-center text-muted py-3">
-                                    <Loader2
-                                        size={26}
-                                        className="mb-2"
-                                        style={{ animation: "spin 1s linear infinite" }}
-                                    />
+                                    <Loader2 size={26} className="mb-2" style={{ animation: "spin 1s linear infinite" }} />
                                     <p className="small mb-0">
-                                        Scanning website for brands & products...
+                                        Scanning website for {isServiceCompany ? "services..." : "brands & products..."}
                                     </p>
                                 </div>
                             )}
 
-                            {/* Success Banner */}
                             {scrapedOk && enriched && !isEnriching && (
                                 <div className="alert alert-success py-2 small mb-3 d-flex align-items-center gap-2">
                                     <CheckCircle size={15} />
-                                    Brands & products detected from website. Review and edit below.
+                                    <span>
+                                        {isServiceCompany
+                                            ? `${services.length} service${services.length !== 1 ? "s" : ""} detected. Review and edit below.`
+                                            : `${brands.length} brand${brands.length !== 1 ? "s" : ""} detected. Review and edit below.`}
+                                    </span>
                                 </div>
                             )}
 
-                            {/* Warning */}
                             {enrichError && (
                                 <div className="alert alert-warning py-2 small mb-3 d-flex align-items-start gap-2">
                                     <AlertCircle size={15} className="mt-1 flex-shrink-0" />
-                                    <span>{enrichError} You can add brands manually below.</span>
+                                    <span>
+                                        {enrichError} You can add {isServiceCompany ? "services" : "brands"} manually below.
+                                    </span>
                                 </div>
                             )}
 
-                            {/* Brands section — show after detect clicked */}
                             {enriched && !isEnriching && (
                                 <>
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold small">
-                                            Brands / Models / Products
-                                            <span className="text-muted fw-normal ms-1">
-                                                (edit or add more)
-                                            </span>
-                                        </label>
-
-                                        {/* Brand Tags */}
-                                        <div className="d-flex flex-wrap gap-2 mb-2 p-2 border rounded"
-                                            style={{ minHeight: 48, background: "#f8fafc" }}>
-                                            {brands.length === 0 && (
-                                                <span className="text-muted small align-self-center">
-                                                    No brands detected — add manually below
-                                                </span>
-                                            )}
-                                            {brands.map((b) => (
-                                                <span
-                                                    key={b}
-                                                    className="badge d-flex align-items-center gap-1 px-2 py-1"
-                                                    style={{
-                                                        background: "#dbeafe",
-                                                        color: "#1d4ed8",
-                                                        fontSize: 12,
-                                                        fontWeight: 500,
-                                                    }}
-                                                >
-                                                    {b}
-                                                    <button
-                                                        className="btn p-0 border-0 bg-transparent ms-1"
-                                                        onClick={() => removeBrand(b)}
-                                                        style={{ lineHeight: 1 }}
-                                                    >
-                                                        <X size={11} color="#1d4ed8" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-
-                                        {/* Add brand manually */}
-                                        <div className="input-group">
-                                            <input
-                                                className="form-control"
-                                                placeholder="Add brand/model manually e.g. Delphi AI"
-                                                value={brandInput}
-                                                onChange={(e) => setBrandInput(e.target.value)}
-                                                onKeyDown={(e) => e.key === "Enter" && addBrand()}
-                                            />
-                                            <button
-                                                className="btn btn-outline-primary d-flex align-items-center gap-1"
-                                                onClick={addBrand}
-                                            >
-                                                <Plus size={14} /> Add
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Save error */}
-                                    {saveError && (
-                                        <div className="alert alert-danger py-2 small mb-3">
-                                            {saveError}
+                                    {!isServiceCompany && (
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold small" htmlFor="brand-input">
+                                                Brands / Models / Products{" "}
+                                                <span className="text-muted fw-normal ms-1">(edit or add more)</span>
+                                            </label>
+                                            <div className="d-flex flex-wrap gap-2 mb-2 p-2 border rounded" style={{ minHeight: 48, background: "#f8fafc" }}>
+                                                {brands.length === 0 && (
+                                                    <span className="text-muted small align-self-center">
+                                                        No brands detected — add manually below
+                                                    </span>
+                                                )}
+                                                {brands.map((b) => (
+                                                    <span key={b} className="badge d-flex align-items-center gap-1 px-2 py-1" style={{ background: "#dbeafe", color: "#1d4ed8", fontSize: 12, fontWeight: 500 }}>
+                                                        {b}
+                                                        <button className="btn p-0 border-0 bg-transparent ms-1" style={{ lineHeight: 1 }} onClick={() => removeBrand(b)}>
+                                                            <X size={11} color="#1d4ed8" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="input-group">
+                                                <input
+                                                    id="brand-input"
+                                                    className="form-control"
+                                                    placeholder="Add brand/model manually"
+                                                    value={brandInput}
+                                                    onChange={(e) => setBrandInput(e.target.value)}
+                                                    onKeyDown={(e) => e.key === "Enter" && addBrand()}
+                                                />
+                                                <button className="btn btn-outline-primary d-flex align-items-center gap-1" onClick={addBrand}>
+                                                    <Plus size={14} /> Add
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
 
-                                    {/* Action Buttons */}
+                                    {isServiceCompany && (
+                                        <div className="mb-3">
+                                            <label className="form-label fw-semibold small" htmlFor="service-input">
+                                                Services / Solutions{" "}
+                                                <span className="text-muted fw-normal ms-1">(edit or add more)</span>
+                                            </label>
+                                            <div className="d-flex flex-wrap gap-2 mb-2 p-2 border rounded" style={{ minHeight: 48, background: "#f8fafc" }}>
+                                                {services.length === 0 && (
+                                                    <span className="text-muted small align-self-center">
+                                                        No services detected — add manually below
+                                                    </span>
+                                                )}
+                                                {services.map((s) => (
+                                                    <span key={s} className="badge d-flex align-items-center gap-1 px-2 py-1" style={{ background: "#dbeafe", color: "#1d4ed8", fontSize: 12, fontWeight: 500 }}>
+                                                        {s}
+                                                        <button className="btn p-0 border-0 bg-transparent ms-1" style={{ lineHeight: 1 }} onClick={() => removeService(s)}>
+                                                            <X size={11} color="#1d4ed8" />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="input-group">
+                                                <input
+                                                    id="service-input"
+                                                    className="form-control"
+                                                    placeholder="Add service manually"
+                                                    value={serviceInput}
+                                                    onChange={(e) => setServiceInput(e.target.value)}
+                                                    onKeyDown={(e) => e.key === "Enter" && addService()}
+                                                />
+                                                <button className="btn btn-outline-primary d-flex align-items-center gap-1" onClick={addService}>
+                                                    <Plus size={14} /> Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {saveError && (
+                                        <div className="alert alert-danger py-2 small mb-3">{saveError}</div>
+                                    )}
+
                                     <div className="d-flex gap-2 mt-3">
-                                        <button
-                                            className="btn btn-outline-secondary"
-                                            onClick={() => setStep(1)}
-                                        >
+                                        <button className="btn btn-outline-secondary" onClick={() => setStep(1)}>
                                             ← Back
                                         </button>
-                                        <button
-                                            className="btn btn-primary flex-grow-1 fw-semibold"
-                                            onClick={handleSave}
-                                            disabled={isSaving}
-                                        >
-                                            {isSaving ? (
-                                                <span className="spinner-border spinner-border-sm me-2" />
-                                            ) : (
-                                                <Save size={15} className="me-2" />
-                                            )}
+                                        <button className="btn btn-primary flex-grow-1 fw-semibold" onClick={handleSave} disabled={isSaving}>
+                                            {isSaving ? <span className="spinner-border spinner-border-sm me-2" /> : <Save size={15} className="me-2" />}
                                             {isSaving ? "Saving..." : "Save & Go to Dashboard"}
                                         </button>
                                     </div>
                                 </>
                             )}
 
-                            {/* If not yet enriched — show save option to skip detection */}
                             {!enriched && !isEnriching && (
                                 <div className="d-flex gap-2 mt-2">
-                                    <button
-                                        className="btn btn-outline-secondary"
-                                        onClick={() => setStep(1)}
-                                    >
+                                    <button className="btn btn-outline-secondary" onClick={() => setStep(1)}>
                                         ← Back
                                     </button>
                                     <button
                                         className="btn btn-outline-primary flex-grow-1"
+                                        disabled={!websiteInput.trim()}
                                         onClick={() => {
                                             setWebsiteUrl(websiteInput.trim());
                                             setEnriched(true);
                                         }}
-                                        disabled={!websiteInput.trim()}
                                     >
-                                        Skip detection, add brands manually →
+                                        Skip detection, add {isServiceCompany ? "services" : "brands"} manually →
                                     </button>
                                 </div>
                             )}
                         </>
                     )}
-
                 </div>
 
-                {/* Skip entire enrichment */}
                 <div className="text-center mt-3">
-                    <button
-                        className="btn btn-link text-decoration-none small text-muted p-0"
-                        onClick={() => navigate("/Dashboard")}
-                    >
+                    <button className="btn btn-link text-decoration-none small text-muted p-0" onClick={() => navigate("/Dashboard")}>
                         Skip for now →
                     </button>
                 </div>
-
             </div>
         </div>
     );

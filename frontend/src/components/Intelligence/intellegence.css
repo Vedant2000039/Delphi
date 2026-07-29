@@ -252,6 +252,241 @@ body {
   transform: translateY(-1px);
 }
 
+/* ── Sidebar section cards (Product/Services, Context, History) ── */
+.section-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.section-card:hover {
+  border-color: var(--accent-glow);
+  background: var(--bg-hover);
+}
+.section-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.section-card-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  color: var(--accent);
+}
+.section-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.section-card-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-pri);
+}
+.section-card-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.section-card-arrow {
+  font-size: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Middle quick-action cards ──────────────────────────── */
+.action-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 32px 24px 4px;
+  max-width: 620px;
+  margin: 0 auto;
+  width: 100%;
+}
+.action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: var(--shadow-xs);
+  transition: all 0.18s ease;
+}
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-glow);
+}
+.action-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.action-card-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.action-card-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-pri);
+}
+.action-card-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 640px) {
+  .action-cards-grid { grid-template-columns: 1fr; padding: 14px 16px 0; }
+}
+
+/* ── Modal ───────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 17, 23, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+.modal-panel {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-panel.wide { max-width: 560px; }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+}
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-pri);
+}
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.modal-body { padding: 18px; }
+.modal-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.modal-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin: 12px 0 6px;
+}
+.modal-current-value {
+  font-size: 13px;
+  color: var(--text-sec);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.modal-textarea {
+  width: 100%;
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  background: var(--bg-input);
+  color: var(--text-pri);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.modal-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.modal-btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.modal-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.modal-btn-secondary {
+  background: var(--bg-raised);
+  color: var(--text-sec);
+  border-color: var(--border);
+}
+.modal-confirm-inline {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--amber-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-sec);
+}
+.history-list-modal { max-height: 60vh; }
+
 /* ── Sidebar context panels ─────────────────────────────── */
 .sidebar-context-scroll {
   overflow-y: auto;
@@ -1237,6 +1472,9 @@ body {
   border-radius: var(--radius-sm);
   font-size: 15px;
 }
+
+.chip-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.chip-type { opacity: 0.6; font-size: 0.85em; margin-left: 4px; }
 
 /* ══════════════════════════════════════════════════════════
    RESPONSIVE
