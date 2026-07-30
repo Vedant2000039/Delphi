@@ -37,7 +37,18 @@ function Layout() {
 
   const hideLayoutRoutes = ["/", "/Onboarding", "/Enrichment", "/Otp", "/Forget", "/context-builder"];
 
-  const shouldHideLayout = hideLayoutRoutes.includes(location.pathname);
+  const isKnownPublicRoute = hideLayoutRoutes.includes(location.pathname);
+
+  // A user is only "authenticated" if we actually have a session in storage.
+  // NOTE: Login.js / Otp.js currently only ever call
+  // localStorage.setItem("user", ...) — there is no "token" key being set
+  // anywhere in the onboarding flow. Checking for a token here would mean
+  // this is *always* false, hiding the header even for logged-in users.
+  // If/when a real auth token is introduced, add it back into this check:
+  //   Boolean(localStorage.getItem("token") && localStorage.getItem("user"))
+  const isAuthenticated = Boolean(localStorage.getItem("user"));
+
+  const shouldHideLayout = isKnownPublicRoute || !isAuthenticated;
 
   return (
     <>
