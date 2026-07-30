@@ -2,20 +2,21 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import AuthLayout from "./AuthLayout";
 
 const API_BASE_URL = process.env.REACT_APP_API_DOMAIN;
 
 export default function Otp() {
-    const navigate  = useNavigate();
-    const location  = useLocation();
-    const email     = location.state?.email || "";
+    const navigate = useNavigate();
+    const location = useLocation();
+    const email = location.state?.email || "";
 
-    const [otp,       setOtp]       = useState(["", "", "", "", "", ""]);
-    const [error,     setError]     = useState("");
-    const [success,   setSuccess]   = useState("");
-    const [loading,   setLoading]   = useState(false);
+    const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
-    const [timer,     setTimer]     = useState(60);
+    const [timer, setTimer] = useState(60);
 
     const inputsRef = useRef([]);
 
@@ -64,13 +65,13 @@ export default function Otp() {
 
         setLoading(true);
         try {
-            // ── Step 1: Verify OTP ──
+            // Step 1: Verify OTP
             await axios.post(`${API_BASE_URL}/auth/verify-otp`, {
                 email,
                 otp_code: code,
             });
 
-            // ── Step 2: Fetch full user by email to get user_id ──
+            // Step 2: Fetch full user by email to get user_id
             let userData = {};
             try {
                 const userRes = await axios.get(
@@ -78,18 +79,17 @@ export default function Otp() {
                 );
                 userData = userRes.data.user;
             } catch {
-                // If user fetch fails, store minimal info — enrichment will guard
                 userData = { email };
             }
 
-            // ── Step 3: Store in localStorage ──
+            // Step 3: Store in localStorage
             localStorage.setItem("user", JSON.stringify({
-                user_id:      userData.user_id      || null,
-                email:        userData.email        || email,
-                full_name:    userData.user_first_name
-                                ? `${userData.user_first_name} ${userData.user_last_name}`
-                                : "",
-                role_name:    userData.role_name    || "User",
+                user_id: userData.user_id || null,
+                email: userData.email || email,
+                full_name: userData.user_first_name
+                    ? `${userData.user_first_name} ${userData.user_last_name}`
+                    : "",
+                role_name: userData.role_name || "User",
                 company_name: userData.company_name || "",
             }));
 
@@ -97,12 +97,10 @@ export default function Otp() {
             setTimeout(() => navigate("/Enrichment"), 1500);
 
         } catch (err) {
-            // Only show error if verify-otp itself failed
             const isOtpError = err.config?.url?.includes("verify-otp");
             if (isOtpError) {
                 setError(err.response?.data?.detail || "Invalid or expired OTP. Please try again.");
             } else {
-                // OTP passed but user-fetch failed — still proceed
                 setSuccess("Email verified! Redirecting...");
                 setTimeout(() => navigate("/Enrichment"), 1500);
             }
@@ -129,82 +127,55 @@ export default function Otp() {
     };
 
     return (
-        <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-            <div
-                className="card shadow-lg border-0 rounded-4 p-4 text-center"
-                style={{ maxWidth: "420px", width: "100%" }}
-            >
-                <div className="mb-4">
-                    <div
-                        className="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center shadow-sm mb-3"
-                        style={{ width: "60px", height: "60px" }}
-                    >
-                        <i className="bi bi-envelope-check fs-3"></i>
-                    </div>
-                    <h3 className="fw-bold">Verify Your Email</h3>
-                    <p className="text-muted small">
-                        We sent a 6-digit OTP to <strong>{email}</strong>
-                    </p>
+        <AuthLayout page="otp">
+            <div className="dp-form-head dp-center">
+                <div className="dp-icon-badge">
+                    <i className="bi bi-envelope-check" />
                 </div>
-
-                {error   && <div className="alert alert-danger  py-2 small">{error}</div>}
-                {success && <div className="alert alert-success py-2 small">{success}</div>}
-
-                {/* OTP Inputs */}
-                <div className="d-flex justify-content-center gap-2 mb-4" onPaste={handlePaste}>
-                    {otp.map((digit, i) => (
-                        <input
-                            key={i}
-                            ref={el => inputsRef.current[i] = el}
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={1}
-                            className="form-control text-center fw-bold fs-4"
-                            style={{ width: "48px", height: "56px" }}
-                            value={digit}
-                            onChange={(e) => handleChange(e.target.value, i)}
-                            onKeyDown={(e) => handleKeyDown(e, i)}
-                        />
-                    ))}
-                </div>
-
-                <button
-                    className="btn btn-primary w-100 fw-semibold"
-                    onClick={handleVerify}
-                    disabled={loading}
-                >
-                    {loading
-                        ? <span className="spinner-border spinner-border-sm me-2" />
-                        : <i className="bi bi-shield-check me-2"></i>
-                    }
-                    {loading ? "Verifying..." : "Verify OTP"}
-                </button>
-
-                <div className="mt-3">
-                    {timer > 0 ? (
-                        <p className="text-muted small">
-                            Resend OTP in <strong>{timer}s</strong>
-                        </p>
-                    ) : (
-                        <button
-                            className="btn btn-link text-decoration-none small text-primary p-0"
-                            onClick={handleResend}
-                            disabled={resending}
-                        >
-                            {resending ? "Sending..." : "Resend OTP"}
-                        </button>
-                    )}
-                </div>
-
-                <div className="mt-2">
-                    <button
-                        className="btn btn-link text-decoration-none small text-secondary p-0"
-                        onClick={() => navigate("/Onboarding")}
-                    >
-                        Back to Register
-                    </button>
-                </div>
+                <h2>Verify your email</h2>
+                <p>We sent a 6-digit code to <strong>{email}</strong></p>
             </div>
-        </div>
+
+            {error && <div className="dp-alert dp-alert-error">{error}</div>}
+            {success && <div className="dp-alert dp-alert-success">{success}</div>}
+
+            <div className="dp-otp-row" onPaste={handlePaste}>
+                {otp.map((digit, i) => (
+                    <input
+                        key={i}
+                        ref={el => inputsRef.current[i] = el}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        className="dp-otp-input"
+                        value={digit}
+                        onChange={(e) => handleChange(e.target.value, i)}
+                        onKeyDown={(e) => handleKeyDown(e, i)}
+                    />
+                ))}
+            </div>
+
+            <button className="dp-btn dp-btn-primary" onClick={handleVerify} disabled={loading}>
+                {loading ? <><div className="dp-spin" /> Verifying...</> : "Verify OTP"}
+            </button>
+
+            <div className="dp-center dp-mt-3">
+                {timer > 0 ? (
+                    <p style={{ fontSize: 13, color: "var(--dp-muted)", margin: 0 }}>
+                        Resend code in <strong>{timer}s</strong>
+                    </p>
+                ) : (
+                    <button className="dp-link" onClick={handleResend} disabled={resending}>
+                        {resending ? "Sending..." : "Resend OTP"}
+                    </button>
+                )}
+            </div>
+
+            <div className="dp-center dp-mt-3">
+                <button className="dp-link-muted" onClick={() => navigate("/Onboarding")}>
+                    Back to Register
+                </button>
+            </div>
+        </AuthLayout>
     );
 }

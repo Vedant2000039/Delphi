@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    Zap,
     Search,
     Loader2,
     Save,
@@ -12,6 +11,7 @@ import {
     Plus,
 } from "lucide-react";
 import axios from "axios";
+import AuthLayout from "./AuthLayout";
 
 const API_BASE_URL = process.env.REACT_APP_API_DOMAIN;
 
@@ -53,71 +53,6 @@ const INDUSTRY_OPTIONS = [
     "Accounting",
     "Financial Services",
 ];
-
-//────────────────────────────────────────────────────────────
-
-function StepIndicator({ step }) {
-    return (
-        <div className="d-flex align-items-center justify-content-center gap-2 mb-4">
-
-            <div
-                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                style={{
-                    width: 32,
-                    height: 32,
-                    background: step >= 1 ? "#3b82f6" : "#e5e7eb",
-                    color: step >= 1 ? "#fff" : "#6b7280",
-                    fontSize: 14,
-                }}
-            >
-                {step > 1 ? <CheckCircle size={16} /> : "1"}
-            </div>
-
-            <div
-                style={{
-                    width: 48,
-                    height: 2,
-                    background: step >= 2 ? "#3b82f6" : "#e5e7eb",
-                }}
-            />
-
-            <div
-                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                style={{
-                    width: 32,
-                    height: 32,
-                    background: step >= 2 ? "#3b82f6" : "#e5e7eb",
-                    color: step >= 2 ? "#fff" : "#6b7280",
-                    fontSize: 14,
-                }}
-            >
-                2
-            </div>
-
-            <div
-                style={{
-                    width: 48,
-                    height: 2,
-                    background: "#e5e7eb",
-                }}
-            />
-
-            <div
-                className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                style={{
-                    width: 32,
-                    height: 32,
-                    background: "#e5e7eb",
-                    color: "#6b7280",
-                    fontSize: 14,
-                }}
-            >
-                3
-            </div>
-
-        </div>
-    );
-}
 
 //────────────────────────────────────────────────────────────
 
@@ -424,67 +359,12 @@ export default function Enrichment() {
     //────────────────────────────────────────────
 
     return (
-        <div className="min-vh-100 d-flex align-items-center justify-content-center p-4 bg-light">
-            <div style={{ width: "100%", maxWidth: "640px" }}>
-                <div className="d-flex align-items-center justify-content-center gap-2 mb-3">
-                    <div
-                        className="rounded-3 bg-primary d-flex align-items-center justify-content-center"
-                        style={{ width: 40, height: 40 }}
-                    >
-                        <Zap size={20} className="text-white" />
-                    </div>
-                    <span className="fw-bold fs-5 text-dark">DELPHI AI</span>
-                </div>
-
-                <div className="d-flex align-items-center justify-content-center gap-2 mb-4">
-                    <div
-                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                        style={{
-                            width: 32,
-                            height: 32,
-                            background: step >= 1 ? "#3b82f6" : "#e5e7eb",
-                            color: step >= 1 ? "#fff" : "#6b7280",
-                            fontSize: 14,
-                        }}
-                    >
-                        {step > 1 ? <CheckCircle size={16} /> : "1"}
-                    </div>
-                    <div style={{ width: 48, height: 2, background: step >= 2 ? "#3b82f6" : "#e5e7eb" }} />
-                    <div
-                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                        style={{
-                            width: 32,
-                            height: 32,
-                            background: step >= 2 ? "#3b82f6" : "#e5e7eb",
-                            color: step >= 2 ? "#fff" : "#6b7280",
-                            fontSize: 14,
-                        }}
-                    >
-                        2
-                    </div>
-                    <div style={{ width: 48, height: 2, background: "#e5e7eb" }} />
-                    <div
-                        className="d-flex align-items-center justify-content-center rounded-circle fw-bold"
-                        style={{
-                            width: 32,
-                            height: 32,
-                            background: "#e5e7eb",
-                            color: "#6b7280",
-                            fontSize: 14,
-                        }}
-                    >
-                        3
-                    </div>
-                </div>
-
-                <div className="card shadow-lg border-0 rounded-4 p-4">
-                    {step === 1 && (
+        <AuthLayout page="enrichment">
+            {step === 1 && (
                         <>
-                            <div className="mb-4">
-                                <h4 className="fw-bold text-dark mb-1">Company Details</h4>
-                                <p className="text-muted small mb-0">
-                                    Fill in your company information to get started.
-                                </p>
+                            <div className="dp-form-head">
+                                <h2>Company details</h2>
+                                <p>Tell us a little about your company to get started.</p>
                             </div>
 
                             <div className="row g-3">
@@ -642,7 +522,7 @@ export default function Enrichment() {
                                 </div>
                             </div>
 
-                            <button className="btn btn-primary w-100 fw-semibold mt-4" onClick={handleNextStep}>
+                            <button className="dp-btn dp-btn-primary" style={{ marginTop: 24 }} onClick={handleNextStep}>
                                 Next: Add Company Website →
                             </button>
                         </>
@@ -650,11 +530,9 @@ export default function Enrichment() {
 
                     {step === 2 && (
                         <>
-                            <div className="mb-4">
-                                <h4 className="fw-bold text-dark mb-1">
-                                    {isServiceCompany ? "Detect Services" : "Detect Brands & Products"}
-                                </h4>
-                                <p className="text-muted small mb-0">
+                            <div className="dp-form-head">
+                                <h2>{isServiceCompany ? "Detect services" : "Detect brands & products"}</h2>
+                                <p>
                                     Enter your company website URL — we'll automatically detect{" "}
                                     {isServiceCompany ? "your services and solutions." : "your brands, models and products."}
                                 </p>
@@ -675,10 +553,10 @@ export default function Enrichment() {
                                     />
                                 </div>
                                 <button
-                                    className="btn btn-primary px-4"
+                                    className="dp-btn dp-btn-primary"
                                     onClick={handleEnrich}
                                     disabled={!websiteInput.trim() || isEnriching}
-                                    style={{ whiteSpace: "nowrap" }}
+                                    style={{ whiteSpace: "nowrap", width: "auto", padding: "10px 24px" }}
                                 >
                                     {isEnriching ? "Detecting..." : "Detect"}
                                 </button>
@@ -790,28 +668,29 @@ export default function Enrichment() {
                                     )}
 
                                     {saveError && (
-                                        <div className="alert alert-danger py-2 small mb-3">{saveError}</div>
+                                        <div className="dp-alert dp-alert-error">{saveError}</div>
                                     )}
 
-                                    <div className="d-flex gap-2 mt-3">
-                                        <button className="btn btn-outline-secondary" onClick={() => setStep(1)}>
+                                    <div className="dp-btn-row" style={{ marginTop: 18 }}>
+                                        <button className="dp-btn dp-btn-secondary" onClick={() => setStep(1)}>
                                             ← Back
                                         </button>
-                                        <button className="btn btn-primary flex-grow-1 fw-semibold" onClick={handleSave} disabled={isSaving}>
-                                            {isSaving ? <span className="spinner-border spinner-border-sm me-2" /> : <Save size={15} className="me-2" />}
-                                            {isSaving ? "Saving..." : "Save & Go to Dashboard"}
+                                        <button className="dp-btn dp-btn-primary" onClick={handleSave} disabled={isSaving}>
+                                            {isSaving ? <div className="dp-spin" /> : <Save size={15} />}
+                                            {isSaving ? "Saving..." : "Save"}
                                         </button>
                                     </div>
                                 </>
                             )}
 
                             {!enriched && !isEnriching && (
-                                <div className="d-flex gap-2 mt-2">
-                                    <button className="btn btn-outline-secondary" onClick={() => setStep(1)}>
+                                <div className="dp-btn-row" style={{ marginTop: 10 }}>
+                                    <button className="dp-btn dp-btn-secondary" onClick={() => setStep(1)}>
                                         ← Back
                                     </button>
                                     <button
-                                        className="btn btn-outline-primary flex-grow-1"
+                                        className="dp-btn dp-btn-secondary"
+                                        style={{ color: "var(--dp-primary)", borderColor: "var(--dp-primary-light)" }}
                                         disabled={!websiteInput.trim()}
                                         onClick={() => {
                                             setWebsiteUrl(websiteInput.trim());
@@ -824,14 +703,12 @@ export default function Enrichment() {
                             )}
                         </>
                     )}
-                </div>
 
-                <div className="text-center mt-3">
-                    <button className="btn btn-link text-decoration-none small text-muted p-0" onClick={() => navigate("/Dashboard")}>
-                        Skip for now →
-                    </button>
-                </div>
-            </div>
-        </div>
+            {/* <div className="dp-center dp-mt-3">
+                <button className="dp-link-muted" onClick={() => navigate("/Dashboard")}>
+                    Skip for now →
+                </button>
+            </div> */}
+        </AuthLayout>
     );
 }

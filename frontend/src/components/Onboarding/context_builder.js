@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   Users,
 } from "lucide-react";
+import AuthLayout from "./AuthLayout";
 import "./context_builder.css";
 
 // ----------------------------------------------------------------------------
@@ -715,55 +716,51 @@ export default function ContextBuilder({ userId: userIdProp, onComplete }) {
   };
 
   return (
-    <div className="cb-page">
-      <div className="cb-container">
-        <ProgressHeader currentStep={currentStep} />
+    <AuthLayout page="context">
+      <ProgressHeader currentStep={currentStep} />
 
-        <div className="cb-card">
-          <div className="cb-card-header">
-            <h1 className="cb-title">{stepTitles[currentStep]}</h1>
-            <p className="cb-description">{stepDescriptions[currentStep]}</p>
-          </div>
-
-          <ErrorBanner message={stepError} onRetry={retryCurrentStep} />
-          <ErrorBanner message={submitError} onRetry={handleFinish} />
-
-          <div className="cb-card-body">{renderStepContent()}</div>
-
-          <div className="cb-card-footer">
-            <button
-              type="button"
-              className="cb-btn cb-btn-secondary"
-              onClick={goPrevious}
-              disabled={currentStep === 1 || submitting}
-            >
-              <ChevronLeft size={18} />
-              Previous
-            </button>
-
-            <button
-              type="button"
-              className="cb-btn cb-btn-primary"
-              onClick={goNext}
-              disabled={!isStepValid || submitting}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="cb-spin" size={18} />
-                  Saving...
-                </>
-              ) : currentStep === TOTAL_STEPS ? (
-                "Finish"
-              ) : (
-                <>
-                  Continue
-                  <ChevronRight size={18} />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+      <div className="cb-card-header">
+        <h1 className="cb-title">{stepTitles[currentStep]}</h1>
+        <p className="cb-description">{stepDescriptions[currentStep]}</p>
       </div>
-    </div>
+
+      <ErrorBanner message={stepError} onRetry={retryCurrentStep} />
+      <ErrorBanner message={submitError} onRetry={handleFinish} />
+
+      <div className="cb-card-body">{renderStepContent()}</div>
+
+      <div className="cb-card-footer">
+        <button
+          type="button"
+          className="cb-btn cb-btn-secondary"
+          onClick={goPrevious}
+          disabled={currentStep === 1 || submitting}
+        >
+          <ChevronLeft size={18} />
+          Previous
+        </button>
+
+        <button
+          type="button"
+          className="cb-btn cb-btn-primary"
+          onClick={goNext}
+          disabled={!isStepValid || submitting}
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="cb-spin" size={18} />
+              Saving...
+            </>
+          ) : currentStep === TOTAL_STEPS ? (
+            "Finish"
+          ) : (
+            <>
+              Continue
+              <ChevronRight size={18} />
+            </>
+          )}
+        </button>
+      </div>
+    </AuthLayout>
   );
 }

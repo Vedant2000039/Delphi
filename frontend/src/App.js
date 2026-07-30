@@ -35,7 +35,7 @@ import ContextBuilder from "./components/Onboarding/context_builder";
 function Layout() {
   const location = useLocation();
 
-  const hideLayoutRoutes = ["/", "/Onboarding", "/Enrichment", "/Otp", "/Forget"];
+  const hideLayoutRoutes = ["/", "/Onboarding", "/Enrichment", "/Otp", "/Forget", "/context-builder"];
 
   const shouldHideLayout = hideLayoutRoutes.includes(location.pathname);
 
