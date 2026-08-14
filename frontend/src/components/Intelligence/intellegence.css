@@ -1476,6 +1476,71 @@ body {
 .chip-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .chip-type { opacity: 0.6; font-size: 0.85em; margin-left: 4px; }
 
+
+.insights-panel {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.insights-panel-title {
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 2px 6px 6px;
+}
+.insight-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-sec);
+  transition: all 0.15s ease;
+}
+.insight-item:hover { background: var(--bg-hover); }
+.insight-item.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-glow);
+  color: var(--accent-text);
+}
+.insight-item-icon { display: flex; opacity: 0.85; }
+.insight-item-label { font-size: 12.5px; font-weight: 500; flex: 1; }
+.insight-item-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 0 3px var(--emerald-soft);
+}
+
+/* action cards now scroll with messages, not pinned */
+.messages-area .action-cards-grid {
+  padding: 8px 24px 20px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* Rich inline flows (ICP / Buyer Group) need more room than a chat bubble */
+.message-row.bot:has(.icp-container),
+.message-row.bot:has(.bg-container) {
+  width: 100%;
+}
+.message-row.bot:has(.icp-container) .message-content,
+.message-row.bot:has(.bg-container) .message-content {
+  max-width: min(880px, 92%);
+  width: 100%;
+}
+
 /* ══════════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════════ */

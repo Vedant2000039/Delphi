@@ -8,6 +8,7 @@ __pycache__/
 venv/
 .venv/
 backend/.env
+backend/delphi_mcp/.venv
 *.csv
 
 # Node.js
@@ -30,3 +31,10 @@ dist/
 EOFbackend/pipeline/
 backend/trend.py
 backend/pipeline/
+
+postman
+
+backend/delphi_mcp/.env
+.env
+.env.*
+!.env.example

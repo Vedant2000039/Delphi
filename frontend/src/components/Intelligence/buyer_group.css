@@ -1,0 +1,322 @@
+/* ----------------------------------------------------------------------------
+   Delphi AI - Buyer Group Styles
+   Theme-aware: uses the app's --bg / --text / --border variables.
+   Location: frontend/src/components/Intelligence/buyer_group.css
+---------------------------------------------------------------------------- */
+
+.bg-container {
+  width: 100%;
+  max-width: 860px;
+  color: var(--text-pri);
+}
+
+.bg-back-link {
+  background: transparent;
+  border: none;
+  color: var(--accent-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  padding: 0;
+}
+.bg-back-link:hover { text-decoration: underline; }
+
+/* ---------- Loading states ---------- */
+
+.bg-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  color: var(--text-dim);
+  font-size: 14px;
+  text-align: center;
+}
+.bg-loading-large h3 { color: var(--text-pri); font-size: 17px; margin: 8px 0 4px 0; }
+.bg-loading-large p { color: var(--text-dim); font-size: 13.5px; max-width: 360px; }
+
+.bg-spin {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--accent-glow);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: bg-spin 0.8s linear infinite;
+}
+@keyframes bg-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ---------- Error state ---------- */
+
+.bg-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+[data-theme="dark"] .bg-error-banner { color: #fca5a5; }
+
+.bg-retry-btn {
+  margin-left: auto;
+  background: var(--bg-surface);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+[data-theme="dark"] .bg-retry-btn { color: #fca5a5; }
+.bg-retry-btn:hover { background: rgba(239, 68, 68, 0.1); }
+
+/* ---------- Step 1: Brand selector (legacy, kept for compat) ---------- */
+
+.bg-select-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-mid);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow-xs);
+}
+.bg-select-title { font-size: 17px; font-weight: 700; color: var(--text-pri); margin: 0 0 6px 0; }
+.bg-select-subtitle { font-size: 13.5px; color: var(--text-dim); margin: 0 0 20px 0; line-height: 1.5; }
+
+.bg-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.bg-option-card {
+  background: var(--bg-raised);
+  border: 1.5px solid var(--border-mid);
+  border-radius: 10px;
+  padding: 14px 12px;
+  color: var(--text-sec);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bg-option-card:hover { border-color: var(--accent); background: var(--accent-soft); }
+.bg-option-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+
+.bg-btn-primary {
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 22px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.bg-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.bg-btn-primary:hover:not(:disabled) { opacity: 0.9; }
+
+.bg-btn-secondary {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-mid);
+  color: var(--text-sec);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bg-btn-secondary:hover { border-color: var(--accent); color: var(--accent-text); }
+
+/* ---------- Result panel ---------- */
+
+.bg-result-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-mid);
+  border-radius: 16px;
+  padding: 26px 30px;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+
+.bg-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.bg-result-eyebrow {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--emerald);
+}
+
+.bg-result-brand {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-pri);
+  margin: 4px 0 0 0;
+}
+
+.bg-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.bg-tag {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-glow);
+}
+
+.bg-block-title-row { margin: 18px 0 14px; }
+.bg-block-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- Buyer group cards ---------- */
+
+.bg-group-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.bg-group-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bg-group-name { font-size: 14px; font-weight: 700; color: var(--accent-text); }
+.bg-group-roles { font-size: 12.5px; color: var(--text-sec); line-height: 1.5; }
+.bg-group-goals { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.bg-group-goals-label { font-weight: 700; color: var(--emerald); }
+.bg-influence-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.bg-empty-groups { grid-column: 1 / -1; color: var(--text-dim); font-size: 13px; padding: 20px; text-align: center; }
+
+/* Legacy single-card grid (economic buyer / champion / influencers / group size) */
+.bg-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.bg-insight-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.bg-insight-highlight { background: var(--accent-soft); border-color: var(--accent-glow); }
+.bg-card-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 8px;
+}
+.bg-card-body { font-size: 14px; color: var(--text-sec); line-height: 1.55; margin: 0; }
+.bg-card-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.bg-card-list li { font-size: 14px; color: var(--text-sec); padding-left: 14px; position: relative; }
+.bg-card-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.bg-why-panel {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-glow);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+/* ---------- Role breakdown table (legacy) ---------- */
+
+.bg-table-wrap { margin-bottom: 24px; }
+.bg-role-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
+.bg-role-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.bg-role-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-sec);
+}
+.bg-share-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.bg-share-bar { flex: 1; height: 6px; background: var(--border-soft); border-radius: 999px; overflow: hidden; }
+.bg-share-fill { height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 999px; }
+
+/* ---------- Stats row ---------- */
+
+.bg-stats-row {
+  display: flex;
+  gap: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+.bg-stat { display: flex; flex-direction: column; gap: 2px; }
+.bg-stat-value { font-size: 20px; font-weight: 700; color: var(--text-pri); font-family: 'JetBrains Mono', monospace; }
+.bg-stat-label { font-size: 11.5px; color: var(--text-dim); }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+  .bg-group-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 780px) {
+  .bg-result-panel { padding: 20px 18px; }
+  .bg-card-grid { grid-template-columns: 1fr; }
+  .bg-result-header { flex-direction: column; gap: 12px; }
+  .bg-stats-row { flex-wrap: wrap; gap: 20px; }
+  .bg-role-table { display: block; overflow-x: auto; }
+}

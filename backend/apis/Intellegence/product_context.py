@@ -1,136 +1,236 @@
+"""
+backend/apis/Intellegence/product_context.py
+Single source of truth for "which product/service is currently selected"
++ cached product_analysis so ICP and Buyer Group never re-ask the user
+and never re-run the LLM product analysis twice for the same product.
+"""
+
+import os, json, logging
+import mysql.connector
+from mysql.connector import pooling, Error as MySQLError
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
-from db import get_conn
-import json
+from typing import Optional
 
-router = APIRouter(prefix="/profile", tags=["Product Context"])
+logger = logging.getLogger("delphi.product_context")
+
+DB_CONFIG = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "delphi"),
+}
+
+try:
+    _pool = pooling.MySQLConnectionPool(pool_name="product_context_pool", pool_size=5, **DB_CONFIG)
+except MySQLError as exc:
+    _pool = None
+    logger.error("product_context pool init failed: %s", exc)
 
 
-from fastapi import HTTPException
-
-@router.get("/products/{user_id}")
-def get_products(user_id: int):
+def _conn():
+    global _pool
+    if _pool is None:
+        try:
+            _pool = pooling.MySQLConnectionPool(pool_name="product_context_pool", pool_size=5, **DB_CONFIG)
+        except MySQLError as exc:
+            raise HTTPException(503, "Database unavailable.") from exc
     try:
-        conn = get_conn()
-        cur = conn.cursor(dictionary=True)
+        return _pool.get_connection()
+    except MySQLError as exc:
+        raise HTTPException(503, "Database unavailable.") from exc
 
-        cur.execute("""
-            SELECT id, company_name, brands, services, selected_flag
-            FROM delphi_company_profiles
-            WHERE user_id = %s
-        """, (user_id,))
 
-        rows = cur.fetchall()
+router = APIRouter(prefix="/intellegence", tags=["Intellegence Context"])
 
-        return rows
 
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-    finally:
-        cur.close()
-        conn.close()
+def _ensure_tables(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS delphi_selected_product_context (
+            user_id BIGINT PRIMARY KEY,
+            selected_product VARCHAR(500),
+            selected_type VARCHAR(50),
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS delphi_product_analysis_cache (
+            user_id BIGINT PRIMARY KEY,
+            product VARCHAR(500),
+            product_analysis JSON,
+            icp_insight JSON,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+    """)
 
 
 class SelectProductRequest(BaseModel):
     user_id: int
-    profile_id: int
-    value: str
-    type: str
+    product: str
+    type: Optional[str] = None
 
 
-@router.post("/products/select")
+@router.get("/product-options/{user_id}")
+def get_product_options(user_id: int):
+    conn = _conn()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        _ensure_tables(cursor)
+        conn.commit()
+
+        cursor.execute(
+            "SELECT brands, services FROM delphi_company_profiles WHERE user_id=%s ORDER BY updated_at DESC LIMIT 1",
+            (user_id,),
+        )
+        profile = cursor.fetchone() or {}
+
+        def _split(raw):
+            if not raw:
+                return []
+            raw = raw.strip()
+            if raw.startswith("["):
+                try:
+                    return [str(x).strip() for x in json.loads(raw) if str(x).strip()]
+                except Exception:
+                    pass
+            return [x.strip() for x in raw.split(",") if x.strip()]
+
+        brands = _split(profile.get("brands"))
+        services = _split(profile.get("services"))
+
+        cursor.execute(
+            "SELECT selected_product FROM delphi_selected_product_context WHERE user_id=%s", (user_id,)
+        )
+        sel_row = cursor.fetchone()
+        selected = sel_row["selected_product"] if sel_row else None
+
+        items = [{"value": b, "type": "product", "selected": b == selected} for b in brands]
+        items += [{"value": s, "type": "service", "selected": s == selected} for s in services]
+
+        return {
+            "items": items,
+            "selected": next((i for i in items if i["selected"]), None),
+            "is_first_time": selected is None,
+        }
+    except MySQLError as exc:
+        logger.error("get_product_options error: %s", exc)
+        raise HTTPException(500, "Failed to fetch products/services.")
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
+
+
+@router.post("/select-product")
 def select_product(payload: SelectProductRequest):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        UPDATE delphi_company_profiles
-        SET selected_flag = 0
-        WHERE user_id = %s
-    """, (payload.user_id,))
-    cur.execute("""
-        UPDATE delphi_company_profiles
-        SET selected_flag = 1, selected_value = %s, selected_type = %s
-        WHERE id = %s AND user_id = %s
-    """, (payload.value, payload.type, payload.profile_id, payload.user_id))
-    conn.commit()
-    cur.close(); conn.close()
-    return {"status": "ok", "selected": {"profile_id": payload.profile_id, "value": payload.value, "type": payload.type}}
+    conn = _conn()
+    try:
+        cursor = conn.cursor()
+        _ensure_tables(cursor)
+        cursor.execute(
+            """
+            INSERT INTO delphi_selected_product_context (user_id, selected_product, selected_type)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                selected_product = VALUES(selected_product),
+                selected_type    = VALUES(selected_type),
+                updated_at       = CURRENT_TIMESTAMP
+            """,
+            (payload.user_id, payload.product, payload.type or "product"),
+        )
+        # switching product invalidates any cached analysis tied to a different product
+        cursor.execute(
+            "DELETE FROM delphi_product_analysis_cache WHERE user_id=%s AND product != %s",
+            (payload.user_id, payload.product),
+        )
+        conn.commit()
+        return {"success": True, "selected": payload.product}
+    except MySQLError as exc:
+        conn.rollback()
+        logger.error("select_product error: %s", exc)
+        raise HTTPException(500, "Failed to save your selection.")
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
 
 
-@router.get("/context/{user_id}")
-def get_context(user_id: int):
-    conn = get_conn()
-    cur = conn.cursor(dictionary=True)
-    cur.execute("""
-        SELECT selected_product, selected_service, geographies, industries, categories, domains
-        FROM delphi_context_builder_user_selections
-        WHERE user_id = %s
-    """, (user_id,))
-    row = cur.fetchone()
-    cur.close(); conn.close()
+@router.get("/selected-product/{user_id}")
+def get_selected_product(user_id: int):
+    conn = _conn()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        _ensure_tables(cursor)
+        conn.commit()
+        cursor.execute(
+            "SELECT selected_product, selected_type FROM delphi_selected_product_context WHERE user_id=%s",
+            (user_id,),
+        )
+        row = cursor.fetchone()
+        if not row or not row.get("selected_product"):
+            return {"selected_product": None, "is_first_time": True}
+        return {"selected_product": row["selected_product"], "selected_type": row["selected_type"], "is_first_time": False}
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
 
-    if not row:
-        return {"context": None}
 
-    for f in ("geographies", "industries", "categories", "domains"):
-        if isinstance(row.get(f), str):
-            row[f] = json.loads(row[f])
-    return {"context": row}
-
-
-class ContextUpdateRequest(BaseModel):
+class SaveAnalysisRequest(BaseModel):
     user_id: int
-    selected_product: Optional[str] = None
-    selected_service: Optional[str] = None
-    geographies: Optional[List[str]] = None
-    industries: Optional[List[str]] = None
-    categories: Optional[List[str]] = None
-    domains: Optional[List[str]] = None
+    product: str
+    product_analysis: dict
+    icp_insight: Optional[dict] = None
 
 
-@router.post("/context/update")
-def update_context(payload: ContextUpdateRequest):
-    conn = get_conn()
-    cur = conn.cursor(dictionary=True)
-    cur.execute("SELECT id FROM delphi_context_builder_user_selections WHERE user_id = %s", (payload.user_id,))
-    exists = cur.fetchone()
-
-    fields = {
-        "selected_product": payload.selected_product,
-        "selected_service": payload.selected_service,
-        "geographies": json.dumps(payload.geographies) if payload.geographies is not None else None,
-        "industries": json.dumps(payload.industries) if payload.industries is not None else None,
-        "categories": json.dumps(payload.categories) if payload.categories is not None else None,
-        "domains": json.dumps(payload.domains) if payload.domains is not None else None,
-    }
-    fields = {k: v for k, v in fields.items() if v is not None}
-
-    if exists:
-        set_clause = ", ".join(f"{k} = %s" for k in fields)
-        cur2 = conn.cursor()
-        cur2.execute(
-            f"UPDATE delphi_context_builder_user_selections SET {set_clause} WHERE user_id = %s",
-            (*fields.values(), payload.user_id)
+@router.post("/save-product-analysis")
+def save_product_analysis(payload: SaveAnalysisRequest):
+    conn = _conn()
+    try:
+        cursor = conn.cursor()
+        _ensure_tables(cursor)
+        cursor.execute(
+            """
+            INSERT INTO delphi_product_analysis_cache (user_id, product, product_analysis, icp_insight)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                product = VALUES(product),
+                product_analysis = VALUES(product_analysis),
+                icp_insight = VALUES(icp_insight),
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (payload.user_id, payload.product, json.dumps(payload.product_analysis),
+             json.dumps(payload.icp_insight) if payload.icp_insight else None),
         )
-        cur2.close()
-    else:
-        cols = ", ".join(["user_id"] + list(fields.keys()))
-        placeholders = ", ".join(["%s"] * (len(fields) + 1))
-        defaults = {"geographies": "[]", "industries": "[]", "categories": "[]", "domains": "[]"}
-        for k, v in defaults.items():
-            fields.setdefault(k, v)
-        cols = ", ".join(["user_id"] + list(fields.keys()))
-        placeholders = ", ".join(["%s"] * (len(fields) + 1))
-        cur2 = conn.cursor()
-        cur2.execute(
-            f"INSERT INTO delphi_context_builder_user_selections ({cols}) VALUES ({placeholders})",
-            (payload.user_id, *fields.values())
-        )
-        cur2.close()
+        conn.commit()
+        return {"success": True}
+    except MySQLError as exc:
+        conn.rollback()
+        logger.error("save_product_analysis error: %s", exc)
+        raise HTTPException(500, "Failed to cache product analysis.")
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
 
-    conn.commit()
-    cur.close(); conn.close()
-    return {"status": "ok"}
+
+@router.get("/product-analysis/{user_id}")
+def get_product_analysis(user_id: int):
+    conn = _conn()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        _ensure_tables(cursor)
+        conn.commit()
+        cursor.execute(
+            "SELECT product, product_analysis, icp_insight FROM delphi_product_analysis_cache WHERE user_id=%s",
+            (user_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return {"cached": False}
+        return {
+            "cached": True,
+            "product": row["product"],
+            "product_analysis": json.loads(row["product_analysis"]) if row["product_analysis"] else None,
+            "icp_insight": json.loads(row["icp_insight"]) if row["icp_insight"] else None,
+        }
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()

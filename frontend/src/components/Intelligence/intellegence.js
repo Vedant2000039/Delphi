@@ -1,12 +1,13 @@
-// Intelligence.js — Enterprise Redesign
+// Intelligence.js — Enterprise Redesign (v2: unified product context flow)
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import "./intellegence.css";
+import CreateICP from "./CreateICP";
+import BuyerGroup from "./BuyerGroup";
 
 const API_BASE   = "http://127.0.0.1:8000";
 const SESSION_ID = `user_${Math.random().toString(36).slice(2, 9)}`;
 
 // ── Field definitions ────────────────────────────────────────────────────────
-
 const PRODUCT_FIELD_LABELS = {
   product_description:  "Product",
   product_name:         "Product Name",
@@ -230,7 +231,6 @@ function LeadsTable({ rows }) {
           )}
         </div>
       </div>
-
       <div className="lt-scroll">
         <table className="lt-table">
           <thead>
@@ -297,7 +297,6 @@ function LeadsTable({ rows }) {
           </tbody>
         </table>
       </div>
-
       {totalPages > 1 && (
         <div className="lt-pagination">
           <span className="lt-page-info">Page {page + 1} of {totalPages} · {sorted.length} results</span>
@@ -380,6 +379,12 @@ const Icon = {
       <path d="M15 7h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
+  Pin: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+      <circle cx="12" cy="9" r="2.3" stroke="currentColor" strokeWidth="1.6"/>
+    </svg>
+  ),
 };
 
 // ── Sidebar Section Card (base) ─────────────────────────────────────────────
@@ -409,27 +414,46 @@ function ProductServicesCard({ subtitle, active, onClick }) {
   );
 }
 
-function ContextCard({ hasAnyContext, overallPct, active, onClick }) {
+// ── Insights sidebar panel ───────────────────────────────────────────────────
+function InsightItem({ icon, label, active, onClick }) {
   return (
-    <SectionCard
-      icon={<Icon.Compass />}
-      title="Context"
-      subtitle={hasAnyContext ? `${overallPct}% complete` : "No context yet"}
-      active={active}
-      onClick={onClick}
-    />
+    <button className={`insight-item ${active ? "active" : ""}`} onClick={onClick}>
+      <span className="insight-item-icon">{icon}</span>
+      <span className="insight-item-label">{label}</span>
+      {active && <span className="insight-item-dot" />}
+    </button>
   );
 }
 
-function SearchHistoryCard({ chatHistory, active, onClick }) {
+function InsightsPanel({ activeInsight, onSelect }) {
   return (
-    <SectionCard
-      icon={<Icon.Clock />}
-      title="Search History"
-      subtitle={chatHistory.length > 0 ? `${chatHistory.length} past searches` : "No history yet"}
-      active={active}
-      onClick={onClick}
-    />
+    <div className="insights-panel">
+      <div className="insights-panel-title">Insights</div>
+      <InsightItem
+        icon={<Icon.Target />}
+        label="Create ICP"
+        active={activeInsight === "icp"}
+        onClick={() => onSelect("icp")}
+      />
+      <InsightItem
+        icon={<Icon.Users />}
+        label="Discover Buyer Group"
+        active={activeInsight === "buyer_group"}
+        onClick={() => onSelect("buyer_group")}
+      />
+      <InsightItem
+        icon={<Icon.Pin />}
+        label="Geo Based Personalization"
+        active={activeInsight === "geo"}
+        onClick={() => onSelect("geo")}
+      />
+      <InsightItem
+        icon={<Icon.Pin />}
+        label="Geo Based Personalization"
+        active={activeInsight === "geo"}
+        onClick={() => onSelect("geo")}
+      />
+    </div>
   );
 }
 
@@ -496,9 +520,79 @@ function Modal({ title, onClose, children, wide }) {
       <div className={`modal-panel ${wide ? "wide" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">{title}</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          {onClose && <button className="modal-close" onClick={onClose}>✕</button>}
         </div>
         <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── First-time Product Picker Modal (forced, no close button) ──────────────
+function ProductPickerModal({ userId, onSelected }) {
+  const [items, setItems]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/intellegence/product-options/${userId}`);
+        const data = await res.json();
+        setItems(data.items || []);
+      } catch (err) {
+        console.error("Failed to load product options:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
+
+  const pick = async (item) => {
+    setSaving(true);
+    try {
+      await fetch(`${API_BASE}/intellegence/select-product`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, product: item.value, type: item.type }),
+      });
+      onSelected(item);
+    } catch (err) {
+      console.error("Failed to select product:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-panel wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">Which product or service do you want insights on?</span>
+        </div>
+        <div className="modal-body">
+          <p className="modal-hint">
+            We detected these from your company profile. Pick one to make it the active context for
+            ICP, Buyer Group, and every future search — you can change it anytime from the sidebar.
+          </p>
+          {loading && <p className="history-empty">Loading products...</p>}
+          <div className="suggestion-chips">
+            {items.map(item => (
+              <button
+                key={`${item.type}-${item.value}`}
+                className="chip"
+                disabled={saving}
+                onClick={() => pick(item)}
+              >
+                {item.value} <span className="chip-type">({item.type})</span>
+              </button>
+            ))}
+            {!loading && items.length === 0 && (
+              <p className="history-empty">No products/services found in your company profile.</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -572,18 +666,15 @@ function PhaseBadge({ phase }) {
 // ── Editable Tag List (for Context modal: geography/industry/category/domain) ─
 function EditableTagList({ values, onChange }) {
   const [draft, setDraft] = useState("");
-
   const addTag = () => {
     const v = draft.trim();
     if (!v) return;
     onChange([...(values || []), v]);
     setDraft("");
   };
-
   const removeTag = idx => {
     onChange((values || []).filter((_, i) => i !== idx));
   };
-
   return (
     <div>
       <div className="suggestion-chips">
@@ -614,7 +705,6 @@ function EditableTagList({ values, onChange }) {
 // ═══════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
-
 export default function Intellegence() {
   const [messages,      setMessages]      = useState([]);
   const [input,         setInput]         = useState("");
@@ -629,23 +719,25 @@ export default function Intellegence() {
     return localStorage.getItem("delphi-theme") === "dark";
   });
 
-  // Section modal state: which sidebar card is expanded ("product" | "context" | "history" | null)
+  // Section modal state: which sidebar card is expanded ("product" | null)
   const [activeSection,   setActiveSection]   = useState(null);
+
+  // Which Insight is currently active (drives the sidebar dot indicator)
+  const [activeInsight,   setActiveInsight]   = useState(null);
+
+  // First-time-user forced product picker
+  const [showProductPicker, setShowProductPicker] = useState(false);
 
   // ── Product/Service selection (fetched from delphi_company_profiles) ──────
   const [productItems,     setProductItems]     = useState([]);
   const [selectedProduct,  setSelectedProduct]  = useState(null);
   const [productsLoading,  setProductsLoading]  = useState(false);
 
-  // ── Targeting context (delphi_context_builder_user_selections) ────────────
-  const [userContext,      setUserContext]      = useState(null);
-  const [contextLoading,   setContextLoading]   = useState(false);
-
   // ── ICP generation ──────────────────────────────────────────────────────────
-  const [icpModalOpen, setIcpModalOpen] = useState(false);
-  const [icpLoading,   setIcpLoading]   = useState(false);
-  const [icpData,      setIcpData]      = useState(null);
-  const [icpForm,       setIcpForm]     = useState({ country_id: "", industry_id: "", brand_id: "" });
+  // "Create ICP" no longer opens a modal — it pushes a message into the
+  // chat conversation, and CreateICP renders inline as part of that
+  // message (same pattern as LeadsTable: a rich component alongside
+  // plain-text bubbles, not wrapped in one).
 
   const bottomRef   = useRef(null);
   const textareaRef = useRef(null);
@@ -655,9 +747,7 @@ export default function Intellegence() {
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);
-
   const USER_ID = user.user_id || user.id;
-
   const userInitials = useMemo(() => {
     const name = user.full_name || user.email || "D";
     return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -692,15 +782,64 @@ export default function Intellegence() {
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), ...msg }]);
   }, []);
 
-  // ── Fetch product/service list + current selection ────────────────────────
+  // ── Check selected product on load — forces the picker modal for
+  //    first-time users, otherwise silently loads the existing selection ──
+  useEffect(() => {
+    if (!USER_ID) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/intellegence/selected-product/${USER_ID}`);
+        const data = await res.json();
+        if (data.is_first_time) {
+          setShowProductPicker(true);
+        } else {
+          setSelectedProduct({ value: data.selected_product, type: data.selected_type });
+        }
+      } catch (err) {
+        console.error("Failed to check selected product:", err);
+      }
+    })();
+  }, [USER_ID]);
+
+  const handleProductPicked = (item) => {
+    setSelectedProduct(item);
+    setShowProductPicker(false);
+  };
+
+  // ── Start Create ICP as an inline chat message ─────────────────────────────
+  const startCreateICP = useCallback(() => {
+    setActiveInsight("icp");
+    pushMessage({ role: "user", text: "Create ICP" });
+    pushMessage({ role: "bot", icpFlow: true });
+  }, [pushMessage]);
+
+  const startDiscoverBuyerGroup = useCallback((brandIds) => {
+    setActiveInsight("buyer_group");
+    pushMessage({ role: "user", text: "Discover Buyer Group" });
+    pushMessage({ role: "bot", buyerGroupFlow: true, brandIds: brandIds || null });
+  }, [pushMessage]);
+
+  const handleInsightSelect = useCallback((key) => {
+    if (key === "icp") {
+      startCreateICP();
+    } else if (key === "buyer_group") {
+      startDiscoverBuyerGroup();
+    } else if (key === "geo") {
+      setActiveInsight("geo");
+      sendMessage("Give me geo-based personalization insights for my product");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startCreateICP, startDiscoverBuyerGroup]);
+
+  // ── Fetch product/service list for the sidebar "Product / Services" modal ─
   const fetchProducts = useCallback(async () => {
     if (!USER_ID) return;
     setProductsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/profile/products/${USER_ID}`);
+      const res = await fetch(`${API_BASE}/intellegence/product-options/${USER_ID}`);
       const data = await res.json();
       setProductItems(data.items || []);
-      setSelectedProduct(data.selected || null);
+      if (data.selected) setSelectedProduct(data.selected);
     } catch (err) {
       console.error("Failed to fetch products:", err);
     } finally {
@@ -708,38 +847,21 @@ export default function Intellegence() {
     }
   }, [USER_ID]);
 
-  // ── Fetch targeting context (geographies/industries/categories/domains) ───
-  const fetchUserContext = useCallback(async () => {
-    if (!USER_ID) return;
-    setContextLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/profile/context/${USER_ID}`);
-      const data = await res.json();
-      setUserContext(data.context || null);
-    } catch (err) {
-      console.error("Failed to fetch context:", err);
-    } finally {
-      setContextLoading(false);
-    }
-  }, [USER_ID]);
-
   useEffect(() => {
-    if (USER_ID) {
+    if (USER_ID && activeSection === "product") {
       fetchProducts();
-      fetchUserContext();
     }
-  }, [USER_ID, fetchProducts, fetchUserContext]);
+  }, [USER_ID, activeSection, fetchProducts]);
 
-  // ── Select a product/service (sets flag in DB) ─────────────────────────────
+  // ── Select a product/service (sets the active context) ────────────────────
   const selectProduct = async (item) => {
     try {
-      await fetch(`${API_BASE}/profile/products/select`, {
+      await fetch(`${API_BASE}/intellegence/select-product`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: USER_ID,
-          profile_id: item.profile_id,
-          value: item.value,
+          product: item.value,
           type: item.type,
         }),
       });
@@ -747,7 +869,7 @@ export default function Intellegence() {
       setProductItems(prev =>
         prev.map(i => ({
           ...i,
-          selected: i.value === item.value && i.profile_id === item.profile_id,
+          selected: i.value === item.value && i.type === item.type,
         }))
       );
     } catch (err) {
@@ -757,42 +879,23 @@ export default function Intellegence() {
     }
   };
 
-  // ── Update targeting context field (geography/industry/category/domain) ───
-  const updateContextField = async (field, values) => {
-    try {
-      await fetch(`${API_BASE}/profile/context/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: USER_ID, [field]: values }),
-      });
-      setUserContext(prev => ({ ...(prev || {}), [field]: values }));
-    } catch (err) {
-      console.error("Failed to update context:", err);
-    }
-  };
-
   const sendMessage = useCallback(async (text) => {
     const finalText = (text || input).trim();
     if (!finalText || loading) return;
-
     pushMessage({ role: "user", text: finalText });
     setInput("");
     setLoading(true);
     setSuggestions({});
-
     try {
       const res = await fetch(`${API_BASE}/context/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionRef.current, message: finalText }),
       });
-
       const data = await res.json();
       console.log("[API Response]", data);
-
       if (data.context)  setContext(data.context);
       if (data.phase)    setPhase(data.phase);
-
       if (data.status === "complete") {
         if (data.summary) pushMessage({ role: "bot", text: data.summary });
         pushMessage({ role: "bot", table: data.leads || data.data || [] });
@@ -847,6 +950,7 @@ export default function Intellegence() {
     setContext({});
     setPhase("product");
     setActiveChatId(null);
+    setActiveInsight(null);
   };
 
   const loadChat = chat => {
@@ -857,50 +961,22 @@ export default function Intellegence() {
     setActiveSection(null);
   };
 
-  // ── ICP generation ──────────────────────────────────────────────────────────
-  const runICP = async () => {
-    setIcpLoading(true);
-    setIcpData(null);
-    try {
-      const res = await fetch(`${API_BASE}/icp/generate-insight`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product: selectedProduct?.value || context.product_name || context.product_description,
-          country_id: icpForm.country_id,
-          industry_id: icpForm.industry_id,
-          brand_id: icpForm.brand_id,
-        }),
-      });
-      const data = await res.json();
-      setIcpData(data.insight);
-    } catch (err) {
-      console.error("ICP generation failed:", err);
-    } finally {
-      setIcpLoading(false);
-    }
-  };
-
   const filledProductFields   = PRODUCT_FIELD_ORDER.filter(f => context[f]);
   const filledTargetingFields = TARGETING_FIELD_ORDER.filter(f => context[f]);
   const totalFilled           = filledProductFields.length + filledTargetingFields.length;
   const hasAnyContext         = totalFilled > 0;
-
   const overallPct = Math.round((totalFilled / ALL_FIELDS.length) * 100);
-
-  const contextFieldsMap = [
-    { key: "geographies", label: "Geographies" },
-    { key: "industries",  label: "Industries" },
-    { key: "categories",  label: "Categories" },
-    { key: "domains",     label: "Domains" },
-  ];
 
   return (
     <div className={`app-shell ${sidebarOpen ? "sidebar-open" : ""}`}>
 
+      {/* ══ FORCED PRODUCT PICKER (first-time users) ══════════════ */}
+      {showProductPicker && (
+        <ProductPickerModal userId={USER_ID} onSelected={handleProductPicked} />
+      )}
+
       {/* ══ SIDEBAR ══════════════════════════════════════════════ */}
       <aside className="sidebar">
-
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-brand">Del<span>phi</span></div>
@@ -929,16 +1005,9 @@ export default function Intellegence() {
             active={activeSection === "product"}
             onClick={() => setActiveSection("product")}
           />
-          <ContextCard
-            hasAnyContext={hasAnyContext}
-            overallPct={overallPct}
-            active={activeSection === "context"}
-            onClick={() => setActiveSection("context")}
-          />
-          <SearchHistoryCard
-            chatHistory={chatHistory}
-            active={activeSection === "history"}
-            onClick={() => setActiveSection("history")}
+          <InsightsPanel
+            activeInsight={activeInsight}
+            onSelect={handleInsightSelect}
           />
         </div>
 
@@ -967,7 +1036,7 @@ export default function Intellegence() {
         <Modal title="Product / Services" onClose={() => setActiveSection(null)}>
           <p className="modal-hint">
             These are the products, services, and brands detected for your account.
-            Select one to make it the active context for searches and ICP generation.
+            Select one to make it the active context for searches, ICP, and Buyer Group.
           </p>
           <label className="modal-label">Currently Selected</label>
           <div className="modal-current-value">
@@ -978,7 +1047,7 @@ export default function Intellegence() {
           <div className="suggestion-chips">
             {productItems.map(item => (
               <button
-                key={`${item.profile_id}-${item.type}-${item.value}`}
+                key={`${item.type}-${item.value}`}
                 className={`chip ${item.selected ? "chip-active" : ""}`}
                 onClick={() => selectProduct(item)}
               >
@@ -989,137 +1058,6 @@ export default function Intellegence() {
               <p className="history-empty">No products/services found.</p>
             )}
           </div>
-        </Modal>
-      )}
-
-      {/* CONTEXT MODAL (geography/industry/category/domain) */}
-      {activeSection === "context" && (
-        <Modal title="Context" onClose={() => setActiveSection(null)} wide>
-          <p className="modal-hint">
-            The targeting context saved for your account. Add or remove values below —
-            changes are saved automatically.
-          </p>
-          {contextLoading && <p className="history-empty">Loading context...</p>}
-          {!contextLoading && contextFieldsMap.map(({ key, label }) => (
-            <SidebarPanel key={key} title={label} defaultOpen>
-              <EditableTagList
-                values={userContext?.[key] || []}
-                onChange={vals => updateContextField(key, vals)}
-              />
-            </SidebarPanel>
-          ))}
-
-          {hasAnyContext && (
-            <div className="overall-progress">
-              <span className="overall-label">Profile complete</span>
-              <ProgressBar filled={totalFilled} total={ALL_FIELDS.length} />
-            </div>
-          )}
-        </Modal>
-      )}
-
-      {activeSection === "history" && (
-        <Modal title="Search History" onClose={() => setActiveSection(null)}>
-          <div className="history-list history-list-modal">
-            {messages.length > 0 && !activeChatId && (
-              <div className="history-item active" onClick={() => setActiveSection(null)}>
-                {messages.find(m => m.role === "user")?.text?.slice(0, 48) || "Current search"}
-              </div>
-            )}
-            {chatHistory.map(chat => (
-              <div
-                key={chat.id}
-                className={`history-item ${activeChatId === chat.id ? "active" : ""}`}
-                onClick={() => loadChat(chat)}
-              >
-                {chat.title}
-              </div>
-            ))}
-            {chatHistory.length === 0 && messages.length === 0 && (
-              <p className="history-empty">Your searches will appear here</p>
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {/* ICP MODAL */}
-      {icpModalOpen && (
-        <Modal
-          title="Create ICP"
-          onClose={() => { setIcpModalOpen(false); setIcpData(null); }}
-          wide
-        >
-          {!icpData && (
-            <>
-              <label className="modal-label">Product</label>
-              <div className="modal-current-value">
-                {selectedProduct?.value || context.product_name || "No product selected"}
-              </div>
-              <label className="modal-label">Country ID</label>
-              <input
-                className="modal-textarea"
-                value={icpForm.country_id}
-                onChange={e => setIcpForm(f => ({ ...f, country_id: e.target.value }))}
-              />
-              <label className="modal-label">Industry ID</label>
-              <input
-                className="modal-textarea"
-                value={icpForm.industry_id}
-                onChange={e => setIcpForm(f => ({ ...f, industry_id: e.target.value }))}
-              />
-              <label className="modal-label">Brand ID</label>
-              <input
-                className="modal-textarea"
-                value={icpForm.brand_id}
-                onChange={e => setIcpForm(f => ({ ...f, brand_id: e.target.value }))}
-              />
-              <div className="modal-actions">
-                <button
-                  className="modal-btn modal-btn-primary"
-                  disabled={icpLoading}
-                  onClick={runICP}
-                >
-                  {icpLoading ? "Generating..." : "Generate ICP"}
-                </button>
-              </div>
-            </>
-          )}
-
-          {icpData && (
-            <div className="icp-result">
-              <p className="modal-hint">{icpData.icp_summary}</p>
-
-              <SidebarPanel title="Top Industries" defaultOpen>
-                {icpData.top_industries?.map(i => (
-                  <ContextPill key={i.name} label={i.name} value={i.score} />
-                ))}
-              </SidebarPanel>
-
-              <SidebarPanel title="Top Job Titles" defaultOpen>
-                {icpData.top_job_titles?.map(j => (
-                  <ContextPill key={j.title} label={j.title} value={j.score} />
-                ))}
-              </SidebarPanel>
-
-              <SidebarPanel title="Firmographics" defaultOpen>
-                <ContextPill label="Employee Size" value={icpData.firmographics?.employee_size} />
-                <ContextPill label="Revenue Range" value={icpData.firmographics?.revenue_range} />
-                <ContextPill label="Geography" value={icpData.firmographics?.geography} />
-              </SidebarPanel>
-
-              <SidebarPanel title="Next Steps" defaultOpen>
-                <ul>
-                  {icpData.recommended_next_steps?.map((s, i) => <li key={i}>{s}</li>)}
-                </ul>
-              </SidebarPanel>
-
-              <div className="modal-actions">
-                <button className="modal-btn modal-btn-secondary" onClick={() => setIcpData(null)}>
-                  Regenerate
-                </button>
-              </div>
-            </div>
-          )}
         </Modal>
       )}
 
@@ -1135,25 +1073,26 @@ export default function Intellegence() {
       {/* ══ MAIN PANEL ═══════════════════════════════════════════ */}
       <main className="main-panel">
 
-        {/* Quick action cards */}
-        <div className="action-cards-grid">
-          <CreateICPCard
-            productName={selectedProduct?.value || context.product_name}
-            onClick={() => setIcpModalOpen(true)}
-          />
-          <DiscoverBuyerGroupCard
-            onClick={() => sendMessage("Help me discover the buyer group for my target accounts")}
-          />
-          <InsightsCard
-            onClick={() => sendMessage("Give me insights about my target market")}
-          />
-          <CurrentTrendCard
-            onClick={() => sendMessage("What are the current trends relevant to my product?")}
-          />
-        </div>
+        {/* Single scrollable entity: action cards + messages together */}
+        <div className="messages-area">
 
-        {/* Messages */}
-        <div className={`messages-area ${messages.length === 0 ? "no-scroll" : ""}`}>
+          {/* Quick action cards — scroll away with the rest of the chat */}
+          <div className="action-cards-grid">
+            <CreateICPCard
+              productName={selectedProduct?.value || context.product_name}
+              onClick={startCreateICP}
+            />
+            <DiscoverBuyerGroupCard
+              onClick={startDiscoverBuyerGroup}
+            />
+            <InsightsCard
+              onClick={() => sendMessage("Give me insights about my target market")}
+            />
+            <CurrentTrendCard
+              onClick={() => sendMessage("What are the current trends relevant to my product?")}
+            />
+          </div>
+
           {messages.map(msg => (
             <div key={msg.id} className={`message-row ${msg.role}`}>
               {msg.role === "bot" && (
@@ -1167,10 +1106,23 @@ export default function Intellegence() {
                   </div>
                 )}
                 {msg.table !== undefined && <LeadsTable rows={msg.table} />}
+                {msg.icpFlow && (
+                  <CreateICP
+                    userId={USER_ID}
+                    onDiscoverBuyerGroup={startDiscoverBuyerGroup}
+                    onOpenProductPicker={() => setActiveSection("product")}
+                  />
+                )}
+                {msg.buyerGroupFlow && (
+                  <BuyerGroup
+                      userId={USER_ID}
+                      brandIds={msg.brandIds}
+                      onOpenProductPicker={() => setActiveSection("product")}
+                  />
+              )}
               </div>
             </div>
           ))}
-
           {loading && (
             <div className="message-row bot">
               <div className="bot-avatar">D</div>
@@ -1179,7 +1131,6 @@ export default function Intellegence() {
               </div>
             </div>
           )}
-
           {!loading && Object.keys(suggestions).length > 0 && (
             <div className="suggestions-area">
               {Object.entries(suggestions).map(([field, items]) => (
@@ -1187,7 +1138,6 @@ export default function Intellegence() {
               ))}
             </div>
           )}
-
           <div ref={bottomRef} />
         </div>
 

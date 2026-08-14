@@ -712,3 +712,5 @@ export default function Enrichment() {
         </AuthLayout>
     );
 }
+
+

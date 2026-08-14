@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import "../../styles/common.css";
-import PromptBox from "./PromptBox";
 import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
 
@@ -331,11 +330,6 @@ export default function CreateIdealTAL() {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Prompt */}
-              <div className="mt-4">
-                <PromptBox onSend={handleCreateICP} />
               </div>
                     
               {/* Snapshot Button */}
