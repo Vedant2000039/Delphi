@@ -341,3 +341,77 @@
     gap: 20px;
   }
 }
+
+/* ---------- Dark mode overrides (scoped to ICP UI only) ---------- */
+[data-theme="dark"] .icp-container {
+  color: #e6eef8;
+}
+
+[data-theme="dark"] .icp-select-panel,
+[data-theme="dark"] .icp-result-panel,
+[data-theme="dark"] .icp-insight-card,
+[data-theme="dark"] .icp-why-panel {
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .icp-select-title,
+[data-theme="dark"] .icp-result-product,
+[data-theme="dark"] .icp-stat-value {
+  color: #e6eef8;
+}
+
+[data-theme="dark"] .icp-select-subtitle,
+[data-theme="dark"] .icp-card-body,
+[data-theme="dark"] .icp-card-list li,
+[data-theme="dark"] .icp-stat-label {
+  color: #9aa6bd;
+}
+
+[data-theme="dark"] .icp-option-card {
+  background: #071025;
+  border: 1.5px solid #122033;
+  color: #cfe6ff;
+}
+
+[data-theme="dark"] .icp-option-card:hover,
+[data-theme="dark"] .icp-option-active {
+  border-color: #4f46e5;
+  background: linear-gradient(90deg, rgba(79,70,229,0.08), rgba(99,102,241,0.04));
+  color: #c7d4ff;
+}
+
+[data-theme="dark"] .icp-btn-primary {
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  color: #0b1220;
+}
+
+[data-theme="dark"] .icp-btn-secondary {
+  background: transparent;
+  border: 1px solid #122033;
+  color: #cfe6ff;
+}
+
+[data-theme="dark"] .icp-tag {
+  background: rgba(79,70,229,0.08);
+  color: #c7d4ff;
+}
+
+[data-theme="dark"] .icp-card-label {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .icp-card-list li::before {
+  background: #4f46e5;
+}
+
+[data-theme="dark"] .icp-loading-state {
+  color: #9aa6bd;
+}
+
+[data-theme="dark"] .icp-error-banner {
+  background: #2b1111;
+  border: 1px solid #552222;
+  color: #fca5a5;
+}

@@ -339,7 +339,7 @@ export default function Enrichment() {
                 }
             );
 
-            navigate("/context-builder");
+            navigate("/Intelligence");
 
         } catch (err) {
 
@@ -359,7 +359,7 @@ export default function Enrichment() {
     //────────────────────────────────────────────
 
     return (
-        <AuthLayout page="enrichment">
+        <AuthLayout page={step === 2 ? "extraction" : "enrichment"}>
             {step === 1 && (
                         <>
                             <div className="dp-form-head">
@@ -712,5 +712,3 @@ export default function Enrichment() {
         </AuthLayout>
     );
 }
-
-

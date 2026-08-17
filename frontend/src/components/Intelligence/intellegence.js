@@ -442,8 +442,8 @@ function InsightsPanel({ activeInsight, onSelect }) {
         onClick={() => onSelect("buyer_group")}
       />
       <InsightItem
-        icon={<Icon.Pin />}
-        label="Geo Based Personalization"
+        icon={<Icon.Bulb />}
+        label="Uncover Persona"
         active={activeInsight === "geo"}
         onClick={() => onSelect("geo")}
       />
@@ -528,26 +528,205 @@ function Modal({ title, onClose, children, wide }) {
   );
 }
 
+// ── Product/Service icon by type ────────────────────────────────────────────
+function ProductTypeIcon({ type }) {
+  const t = (type || "").toLowerCase();
+  if (t === "brand") {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2 3 7v6c0 5 3.8 8.7 9 9 5.2-.3 9-4 9-9V7l-9-5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (t === "service") {
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 12h8M12 8v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ── Shared Product/Service Selector (search + grouped grid + add new) ──────
+function ProductServiceSelector({
+  items,
+  loading,
+  selectedValue,
+  selectedType,
+  onSelect,
+  selecting,
+  onAddNew,
+  adding,
+}) {
+  const [query, setQuery]         = useState("");
+  const [showAddForm, setShowAdd] = useState(false);
+  const [newValue, setNewValue]   = useState("");
+  const [newType, setNewType]     = useState("product");
+
+  const filtered = items.filter(i =>
+    i.value.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  const groups = filtered.reduce((acc, item) => {
+    const key = (item.type || "product").toLowerCase();
+    (acc[key] = acc[key] || []).push(item);
+    return acc;
+  }, {});
+
+  const GROUP_ORDER = ["product", "brand", "service"];
+  const GROUP_LABELS = { product: "Products", brand: "Brands", service: "Services" };
+  const orderedGroupKeys = [
+    ...GROUP_ORDER.filter(k => groups[k]),
+    ...Object.keys(groups).filter(k => !GROUP_ORDER.includes(k)),
+  ];
+
+  const submitNew = async () => {
+    const value = newValue.trim();
+    if (!value || adding) return;
+    await onAddNew({ value, type: newType });
+    setNewValue("");
+    setShowAdd(false);
+  };
+
+  return (
+    <div className="pp-selector">
+      <div className="pp-search-box">
+        <svg className="pp-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+          <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <input
+          type="text"
+          className="pp-search-input"
+          placeholder="Search products, brands, services..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+        />
+      </div>
+
+      {loading && <p className="history-empty">Loading products...</p>}
+
+      {!loading && orderedGroupKeys.map(key => (
+        <div className="pp-group" key={key}>
+          <div className="pp-group-label">
+            {GROUP_LABELS[key] || key}
+            <span className="pp-group-count">{groups[key].length}</span>
+          </div>
+          <div className="pp-card-grid">
+            {groups[key].map(item => {
+              const isActive = item.value === selectedValue && item.type === selectedType;
+              return (
+                <button
+                  key={`${item.type}-${item.value}`}
+                  className={`pp-select-card ${isActive ? "pp-select-card-active" : ""}`}
+                  disabled={selecting}
+                  onClick={() => onSelect(item)}
+                >
+                  <span className="pp-select-card-icon"><ProductTypeIcon type={item.type} /></span>
+                  <span className="pp-select-card-value">{item.value}</span>
+                  {isActive && (
+                    <span className="pp-select-card-check">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {!loading && filtered.length === 0 && (
+        <p className="history-empty">
+          {query ? "No matches for that search." : "No products/services found in your company profile."}
+        </p>
+      )}
+
+      {/* ── Add new product/service ── */}
+      <div className="pp-add-section">
+        {!showAddForm ? (
+          <button className="pp-add-trigger" onClick={() => setShowAdd(true)}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+            Add a new product or service
+          </button>
+        ) : (
+          <div className="pp-add-form">
+            <div className="pp-add-type-toggle">
+              {["product", "brand", "service"].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`pp-add-type-btn ${newType === t ? "pp-add-type-btn-active" : ""}`}
+                  onClick={() => setNewType(t)}
+                >
+                  {GROUP_LABELS[t]}
+                </button>
+              ))}
+            </div>
+            <div className="pp-add-input-row">
+              <input
+                type="text"
+                autoFocus
+                className="pp-add-input"
+                placeholder="e.g. MacBook Pro"
+                value={newValue}
+                onChange={e => setNewValue(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && submitNew()}
+              />
+              <button
+                className="pp-add-confirm"
+                disabled={!newValue.trim() || adding}
+                onClick={submitNew}
+              >
+                {adding ? "Adding..." : "Add"}
+              </button>
+              <button
+                className="pp-add-cancel"
+                onClick={() => { setShowAdd(false); setNewValue(""); }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── First-time Product Picker Modal (forced, no close button) ──────────────
 function ProductPickerModal({ userId, onSelected }) {
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [adding, setAdding]   = useState(false);
 
-  useEffect(() => {
+  const loadItems = useCallback(async () => {
     if (!userId) return;
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/intellegence/product-options/${userId}`);
-        const data = await res.json();
-        setItems(data.items || []);
-      } catch (err) {
-        console.error("Failed to load product options:", err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/intellegence/product-options/${userId}`);
+      const data = await res.json();
+      setItems(data.items || []);
+    } catch (err) {
+      console.error("Failed to load product options:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => { loadItems(); }, [loadItems]);
 
   const pick = async (item) => {
     setSaving(true);
@@ -565,6 +744,24 @@ function ProductPickerModal({ userId, onSelected }) {
     }
   };
 
+  const addNew = async ({ value, type }) => {
+    setAdding(true);
+    try {
+      const res = await fetch(`${API_BASE}/intellegence/add-product`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, value, type }),
+      });
+      const data = await res.json();
+      if (data?.items) setItems(data.items);
+      else await loadItems();
+    } catch (err) {
+      console.error("Failed to add product:", err);
+    } finally {
+      setAdding(false);
+    }
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-panel wide" onClick={e => e.stopPropagation()}>
@@ -575,23 +772,18 @@ function ProductPickerModal({ userId, onSelected }) {
           <p className="modal-hint">
             We detected these from your company profile. Pick one to make it the active context for
             ICP, Buyer Group, and every future search — you can change it anytime from the sidebar.
+            Don't see what you're looking for? Add it below.
           </p>
-          {loading && <p className="history-empty">Loading products...</p>}
-          <div className="suggestion-chips">
-            {items.map(item => (
-              <button
-                key={`${item.type}-${item.value}`}
-                className="chip"
-                disabled={saving}
-                onClick={() => pick(item)}
-              >
-                {item.value} <span className="chip-type">({item.type})</span>
-              </button>
-            ))}
-            {!loading && items.length === 0 && (
-              <p className="history-empty">No products/services found in your company profile.</p>
-            )}
-          </div>
+          <ProductServiceSelector
+            items={items}
+            loading={loading}
+            selectedValue={null}
+            selectedType={null}
+            onSelect={pick}
+            selecting={saving}
+            onAddNew={addNew}
+            adding={adding}
+          />
         </div>
       </div>
     </div>
@@ -879,6 +1071,26 @@ export default function Intellegence() {
     }
   };
 
+  // ── Add a new product/service from the sidebar modal ──────────────────────
+  const [addingProduct, setAddingProduct] = useState(false);
+  const addProduct = async ({ value, type }) => {
+    setAddingProduct(true);
+    try {
+      const res = await fetch(`${API_BASE}/intellegence/add-product`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: USER_ID, value, type }),
+      });
+      const data = await res.json();
+      if (data?.items) setProductItems(data.items);
+      else await fetchProducts();
+    } catch (err) {
+      console.error("Failed to add product:", err);
+    } finally {
+      setAddingProduct(false);
+    }
+  };
+
   const sendMessage = useCallback(async (text) => {
     const finalText = (text || input).trim();
     if (!finalText || loading) return;
@@ -1033,31 +1245,27 @@ export default function Intellegence() {
 
       {/* PRODUCT / SERVICE MODAL */}
       {activeSection === "product" && (
-        <Modal title="Product / Services" onClose={() => setActiveSection(null)}>
+        <Modal title="Product / Services" onClose={() => setActiveSection(null)} wide>
           <p className="modal-hint">
             These are the products, services, and brands detected for your account.
             Select one to make it the active context for searches, ICP, and Buyer Group.
+            Don't see what you're looking for? Add it below.
           </p>
           <label className="modal-label">Currently Selected</label>
           <div className="modal-current-value">
             {selectedProduct?.value || "No product selected yet"}
           </div>
           <label className="modal-label">Choose one</label>
-          {productsLoading && <p className="history-empty">Loading products...</p>}
-          <div className="suggestion-chips">
-            {productItems.map(item => (
-              <button
-                key={`${item.type}-${item.value}`}
-                className={`chip ${item.selected ? "chip-active" : ""}`}
-                onClick={() => selectProduct(item)}
-              >
-                {item.value} <span className="chip-type">({item.type})</span>
-              </button>
-            ))}
-            {!productsLoading && productItems.length === 0 && (
-              <p className="history-empty">No products/services found.</p>
-            )}
-          </div>
+          <ProductServiceSelector
+            items={productItems}
+            loading={productsLoading}
+            selectedValue={selectedProduct?.value}
+            selectedType={selectedProduct?.type}
+            onSelect={selectProduct}
+            selecting={false}
+            onAddNew={addProduct}
+            adding={addingProduct}
+          />
         </Modal>
       )}
 
@@ -1149,7 +1357,7 @@ export default function Intellegence() {
               className="chat-input"
               placeholder={
                 phase === "product"
-                  ? "Describe your product or campaign goal..."
+                  ? "Ask a question about your product or service..."
                   : phase === "targeting"
                   ? "Specify your target audience..."
                   : "Ask a follow-up question or refine your search..."

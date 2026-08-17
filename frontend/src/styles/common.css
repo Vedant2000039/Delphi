@@ -106,7 +106,6 @@
 }
 
 .app-content {
-  padding-top: 72px;
   min-height: 100vh;
 }
 
@@ -163,7 +162,7 @@
 }
 
 [data-theme="dark"] .btn-light {
-  background: #1c2133 !important;
+  background: #4d8ef7 !important;
   border-color: rgba(255,255,255,0.1) !important;
   color: #a0aabb !important;
 }

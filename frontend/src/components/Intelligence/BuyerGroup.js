@@ -6,101 +6,16 @@ import "./buyer_group.css";
 const API_BASE_URL = process.env.REACT_APP_API_DOMAIN || "http://127.0.0.1:8000";
 
 // ============================================================
-// STEP 1: Brand Selector
+// Loading while MCP pipeline runs
 // ============================================================
 
-function BrandSelector({ userId, onConfirm }) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [options, setOptions] = useState([]);
-    const [selected, setSelected] = useState(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        async function loadOptions() {
-            setLoading(true);
-            setError("");
-
-            try {
-                const res = await axios.get(
-                    `${API_BASE_URL}/buyer-group/brand-options/${userId}`
-                );
-
-                if (cancelled) return;
-
-                const opts = res.data.options || [];
-                setOptions(opts);
-                setSelected(opts[0] || null);
-
-            } catch (err) {
-                if (!cancelled) {
-                    setError("Could not load your brands. Please try again.");
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        }
-
-        loadOptions();
-        return () => { cancelled = true; };
-    }, [userId]);
-
-    if (loading) {
-        return (
-            <div className="bg-loading-state">
-                <div className="bg-spin" />
-                <span>Loading your brands...</span>
-            </div>
-        );
-    }
-
-    if (error) {
-        return <div className="bg-error-banner">{error}</div>;
-    }
-
-    return (
-        <div className="bg-select-panel">
-            <h3 className="bg-select-title">
-                Which brand do you want to build a buyer group for?
-            </h3>
-            <p className="bg-select-subtitle">
-                We'll size the roles, seniority, and firmographics that
-                typically show up together on deals for this brand.
-            </p>
-
-            <div className="bg-option-grid">
-                {options.map((opt) => (
-                    <button
-                        key={opt.brand_id}
-                        className={`bg-option-card${selected?.brand_id === opt.brand_id ? " bg-option-active" : ""}`}
-                        onClick={() => setSelected(opt)}
-                    >
-                        {opt.brand_name}
-                    </button>
-                ))}
-            </div>
-
-            <button
-                className="bg-btn-primary"
-                disabled={!selected}
-                onClick={() => onConfirm(selected)}
-            >
-                Build Buyer Group{selected ? ` for "${selected.brand_name}"` : ""}
-            </button>
-        </div>
-    );
-}
-
-// ============================================================
-// STEP 2: Loading while MCP pipeline runs
-// ============================================================
-
-function AnalyzingState({ brandName }) {
+function AnalyzingState({ product }) {
     return (
         <div className="bg-loading-state bg-loading-large">
             <div className="bg-spin" />
-            <h3>Building the buyer group for "{brandName}"...</h3>
+            <h3>
+                Building the buyer group{product ? ` for "${product}"` : ""}...
+            </h3>
             <p>
                 Scoring qualified leads by seniority, function, and
                 company size to map out who's really in the room.
@@ -110,10 +25,10 @@ function AnalyzingState({ brandName }) {
 }
 
 // ============================================================
-// STEP 3: Result — buyer group breakdown
+// Result — buyer group breakdown
 // ============================================================
 
-function BuyerGroupResult({ brandName, data, onChangeBrand }) {
+function BuyerGroupResult({ product, data }) {
     const insight = data?.buyer_group_insight || {};
     const roles = data?.roles || [];
     const summary = data?.summary || {};
@@ -124,11 +39,8 @@ function BuyerGroupResult({ brandName, data, onChangeBrand }) {
             <div className="bg-result-header">
                 <div>
                     <span className="bg-result-eyebrow">Buyer Group</span>
-                    <h2 className="bg-result-brand">{brandName}</h2>
+                    <h2 className="bg-result-brand">{product}</h2>
                 </div>
-                <button className="bg-btn-secondary" onClick={onChangeBrand}>
-                    Change brand
-                </button>
             </div>
 
             <div className="bg-tag-row">
@@ -224,25 +136,36 @@ function BuyerGroupResult({ brandName, data, onChangeBrand }) {
 }
 
 // ============================================================
-// MAIN — orchestrates the 3 steps
+// MAIN — orchestrates the flow.
+//
+// No brand picker: the buyer group is always built for the
+// user's already-selected product, using the same brand match
+// ICP discovery resolved. To analyze a different product, the
+// user changes it via the sidebar product/service switcher card,
+// same as CreateICP.
 // ============================================================
 
 export default function BuyerGroup({ userId, onClose }) {
-    const [stage, setStage] = useState("select"); // select | analyzing | result | error
-    const [brand, setBrand] = useState(null);
+    const [stage, setStage] = useState("analyzing"); // analyzing | result | error
     const [result, setResult] = useState(null);
     const [error, setError] = useState("");
 
-    const runDiscovery = async (selectedBrand) => {
-        setBrand(selectedBrand);
+    const runDiscovery = async () => {
         setStage("analyzing");
         setError("");
 
         try {
             const res = await axios.post(`${API_BASE_URL}/buyer-group/discover`, {
-                brand_id: selectedBrand.brand_id,
-                brand_name: selectedBrand.brand_name
+                user_id: userId
             });
+
+            if (res.data?.data?.error === "no_product_selected") {
+                setError(
+                    "No product or service has been selected yet. Choose one from the sidebar first."
+                );
+                setStage("error");
+                return;
+            }
 
             setResult(res.data.data);
             setStage("result");
@@ -256,6 +179,11 @@ export default function BuyerGroup({ userId, onClose }) {
         }
     };
 
+    useEffect(() => {
+        runDiscovery();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userId]);
+
     return (
         <div className="bg-container">
             {onClose && (
@@ -264,24 +192,16 @@ export default function BuyerGroup({ userId, onClose }) {
                 </button>
             )}
 
-            {stage === "select" && (
-                <BrandSelector userId={userId} onConfirm={runDiscovery} />
-            )}
-
-            {stage === "analyzing" && <AnalyzingState brandName={brand?.brand_name} />}
+            {stage === "analyzing" && <AnalyzingState product={result?.product} />}
 
             {stage === "result" && (
-                <BuyerGroupResult
-                    brandName={brand?.brand_name}
-                    data={result}
-                    onChangeBrand={() => setStage("select")}
-                />
+                <BuyerGroupResult product={result?.product} data={result} />
             )}
 
             {stage === "error" && (
                 <div className="bg-error-banner">
                     {error}
-                    <button className="bg-retry-btn" onClick={() => setStage("select")}>
+                    <button className="bg-retry-btn" onClick={runDiscovery}>
                         Try again
                     </button>
                 </div>

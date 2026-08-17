@@ -26,12 +26,12 @@ const STEP_LABELS = {
     register: "Create account",
     otp: "Verify email",
     enrichment: "Company profile",
-    context: "Targeting setup",
+    extraction: "Detect",
     login: "Sign in",
     forgot: "Reset password",
 };
 
-const ONBOARDING_STEPS = ["register", "otp", "enrichment", "context"];
+const ONBOARDING_STEPS = ["register", "otp", "enrichment", "extraction"];
 
 /**
  * AuthLayout — wraps every screen in the onboarding flow.
@@ -85,7 +85,7 @@ export default function AuthLayout({ page = "login", children }) {
 
             {/* Right content panel */}
             <div className="dp-content">
-                <div className={`dp-content-inner${["enrichment", "context"].includes(page) ? " dp-content-inner-wide" : ""}`}>
+                <div className={`dp-content-inner${["enrichment", "extraction"].includes(page) ? " dp-content-inner-wide" : ""}`}>
                     {/* Mobile-only brand mark */}
                     <div className="dp-brand dp-brand-mobile">
                         <div className="dp-brand-mark">D</div>

@@ -234,3 +234,65 @@ def get_product_analysis(user_id: int):
     finally:
         if conn.is_connected():
             cursor.close(); conn.close()
+
+
+class AddProductRequest(BaseModel):
+    user_id: int
+    value: str
+    type: Optional[str] = None
+
+
+def get_profile(user_id: int):
+    conn = _conn()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM delphi_company_profiles WHERE user_id=%s ORDER BY updated_at DESC LIMIT 1",
+            (user_id,),
+        )
+        return cursor.fetchone() or {}
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
+
+
+def update_profile_column(user_id: int, column: str, value: str):
+    conn = _conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id FROM delphi_company_profiles WHERE user_id=%s ORDER BY updated_at DESC LIMIT 1",
+            (user_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            row_id = row[0]
+            cursor.execute(
+                f"UPDATE delphi_company_profiles SET {column}=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+                (value, row_id),
+            )
+        else:
+            cursor.execute(
+                f"INSERT INTO delphi_company_profiles (user_id, {column}) VALUES (%s, %s)",
+                (user_id, value),
+            )
+        conn.commit()
+    except MySQLError as exc:
+        conn.rollback()
+        logger.error("update_profile_column error: %s", exc)
+        raise HTTPException(500, "Failed to update company profile.")
+    finally:
+        if conn.is_connected():
+            cursor.close(); conn.close()
+
+
+@router.post("/add-product")
+def add_product(payload: AddProductRequest):
+    # payload: user_id, value, type ("product" | "brand" | "service")
+    profile = get_profile(payload.user_id)
+    column = "services" if payload.type == "service" else "brands"
+    existing = [v.strip() for v in (profile.get(column) or "").split(",") if v.strip()]
+    if payload.value not in existing:
+        existing.append(payload.value)
+        update_profile_column(payload.user_id, column, ", ".join(existing))
+    return {"items": get_product_options(payload.user_id)["items"]}

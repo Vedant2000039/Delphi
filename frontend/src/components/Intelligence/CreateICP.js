@@ -6,16 +6,19 @@ import "./create_icp.css";
 const API_BASE_URL = process.env.REACT_APP_API_DOMAIN || "http://127.0.0.1:8000";
 
 // ============================================================
-// STEP 1: Product / Service Selector
+// STEP 1: Product / Service Selector (only shown when the user
+// explicitly clicks "Change product", or when nothing is saved yet)
 // ============================================================
 
-function ProductSelector({ userId, onConfirm }) {
-    const [loading, setLoading] = useState(true);
+function ProductSelector({ userId, initialOptions, initialSelected, onConfirm }) {
+    const [loading, setLoading] = useState(!initialOptions);
     const [error, setError] = useState("");
-    const [options, setOptions] = useState([]);
-    const [selected, setSelected] = useState(null);
+    const [options, setOptions] = useState(initialOptions || []);
+    const [selected, setSelected] = useState(initialSelected || null);
 
     useEffect(() => {
+        if (initialOptions) return; // already have options, no need to refetch
+
         let cancelled = false;
 
         async function loadOptions() {
@@ -44,6 +47,7 @@ function ProductSelector({ userId, onConfirm }) {
 
         loadOptions();
         return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId]);
 
     if (loading) {
@@ -193,14 +197,21 @@ function ICPResult({ product, data, onChangeProduct }) {
 }
 
 // ============================================================
-// MAIN — orchestrates the 3 steps
+// MAIN — orchestrates the flow.
+//
+// On open, we resolve the user's ALREADY-SELECTED product/service
+// once (from /mcp-icp/product-options) and go straight to analysis
+// with it — we never show the picker up front. The picker only
+// appears if there's no saved selection yet, or if the user
+// explicitly clicks "Change product".
 // ============================================================
 
 export default function CreateICP({ userId, onClose }) {
-    const [stage, setStage] = useState("select"); // select | analyzing | result | error
+    const [stage, setStage] = useState("init"); // init | select | analyzing | result | error
     const [product, setProduct] = useState(null);
     const [result, setResult] = useState(null);
     const [error, setError] = useState("");
+    const [options, setOptions] = useState(null);
 
     const runDiscovery = async (selectedProduct) => {
         setProduct(selectedProduct);
@@ -209,8 +220,7 @@ export default function CreateICP({ userId, onClose }) {
 
         try {
             const res = await axios.post(`${API_BASE_URL}/mcp-icp/discover`, {
-                user_id: userId,
-                product: selectedProduct
+                user_id: userId
             });
 
             setResult(res.data.data);
@@ -225,6 +235,47 @@ export default function CreateICP({ userId, onClose }) {
         }
     };
 
+    // Resolve the already-selected product once on mount and skip
+    // straight to discovery — no "which product?" prompt.
+    useEffect(() => {
+        let cancelled = false;
+
+        async function resolveSavedProduct() {
+            try {
+                const res = await axios.get(
+                    `${API_BASE_URL}/mcp-icp/product-options/${userId}`
+                );
+
+                if (cancelled) return;
+
+                const opts = res.data.options || [];
+                const saved = res.data.selected_product;
+
+                setOptions(opts);
+
+                if (saved) {
+                    runDiscovery(saved);
+                } else {
+                    // Nothing saved yet — fall back to letting the user pick.
+                    setProduct(opts[0] || null);
+                    setStage("select");
+                }
+
+            } catch (err) {
+                if (!cancelled) {
+                    setError(
+                        "Could not load your saved product/service. Please try again."
+                    );
+                    setStage("error");
+                }
+            }
+        }
+
+        resolveSavedProduct();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userId]);
+
     return (
         <div className="icp-container">
             {onClose && (
@@ -233,8 +284,20 @@ export default function CreateICP({ userId, onClose }) {
                 </button>
             )}
 
+            {stage === "init" && (
+                <div className="icp-loading-state">
+                    <div className="icp-spin" />
+                    <span>Loading your ICP context...</span>
+                </div>
+            )}
+
             {stage === "select" && (
-                <ProductSelector userId={userId} onConfirm={runDiscovery} />
+                <ProductSelector
+                    userId={userId}
+                    initialOptions={options}
+                    initialSelected={product}
+                    onConfirm={runDiscovery}
+                />
             )}
 
             {stage === "analyzing" && <AnalyzingState product={product} />}
@@ -250,7 +313,10 @@ export default function CreateICP({ userId, onClose }) {
             {stage === "error" && (
                 <div className="icp-error-banner">
                     {error}
-                    <button className="icp-retry-btn" onClick={() => setStage("select")}>
+                    <button
+                        className="icp-retry-btn"
+                        onClick={() => (product ? runDiscovery(product) : setStage("select"))}
+                    >
                         Try again
                     </button>
                 </div>

@@ -29,9 +29,11 @@ export default function Header() {
     onClick={() => navigate("/Dashboard")}
 >
     {/* Enhanced Typography Logo */}
-    <h5 className="mb-0 delphi-logo-text">
+    {/* <h5 className="mb-0 delphi-logo-text">
         DELPHI
-    </h5>
+    </h5> */}
+    <img src="/delphi.png" className="img-fluid" style={{width: '50px'}} alt="Delphi logo" />
+
     <style>{`
         .delphi-logo-text {
             font-family: 'Space Grotesk', sans-serif;
