@@ -1,11 +1,11 @@
-// Intelligence.js — Enterprise Redesign (v2: unified product context flow)
+// Intelligence.js — Enterprise Redesign (v2: unified product context flow, chat via ChatSection)
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import "./intellegence.css";
 import CreateICP from "./CreateICP";
 import BuyerGroup from "./BuyerGroup";
+import ChatSection from "./ChatSection";
 
-const API_BASE   = "http://127.0.0.1:8000";
-const SESSION_ID = `user_${Math.random().toString(36).slice(2, 9)}`;
+const API_BASE = "http://127.0.0.1:8000";
 
 // ── Field definitions ────────────────────────────────────────────────────────
 const PRODUCT_FIELD_LABELS = {
@@ -150,7 +150,7 @@ function IndustryCell({ value }) {
 }
 
 // ── Leads Table ──────────────────────────────────────────────────────────────
-function LeadsTable({ rows }) {
+export function LeadsTable({ rows }) {
   const [page, setPage]             = useState(0);
   const [sortCol, setSortCol]       = useState(null);
   const [sortDir, setSortDir]       = useState("asc");
@@ -429,24 +429,25 @@ function InsightsPanel({ activeInsight, onSelect }) {
   return (
     <div className="insights-panel">
       <div className="insights-panel-title">Insights</div>
+      {/* Parent: Create ICP with nested actions */}
       <InsightItem
         icon={<Icon.Target />}
         label="Create ICP"
-        active={activeInsight === "icp"}
+        active={["icp", "buyer_group", "geo"].includes(activeInsight)}
         onClick={() => onSelect("icp")}
       />
-      <InsightItem
-        icon={<Icon.Users />}
-        label="Discover Buyer Group"
-        active={activeInsight === "buyer_group"}
-        onClick={() => onSelect("buyer_group")}
-      />
-      <InsightItem
-        icon={<Icon.Bulb />}
-        label="Uncover Persona"
-        active={activeInsight === "geo"}
-        onClick={() => onSelect("geo")}
-      />
+      <div style={{ paddingLeft: 18, marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <button className={`insight-subitem ${activeInsight === "buyer_group" ? "active" : ""}`} onClick={() => onSelect("buyer_group")}> 
+          <span className="insight-item-icon"><Icon.Users /></span>
+          <span className="insight-item-label">Discover Buyer Group</span>
+          {activeInsight === "buyer_group" && <span className="insight-item-dot" />}
+        </button>
+        <button className={`insight-subitem ${activeInsight === "geo" ? "active" : ""}`} onClick={() => onSelect("geo")}>
+          <span className="insight-item-icon"><Icon.Bulb /></span>
+          <span className="insight-item-label">Uncover Persona</span>
+          {activeInsight === "geo" && <span className="insight-item-dot" />}
+        </button>
+      </div>
       <InsightItem
         icon={<Icon.Pin />}
         label="Geo Based Personalization"
@@ -484,8 +485,8 @@ function DiscoverBuyerGroupCard({ onClick }) {
   return (
     <ActionCard
       icon={<Icon.Users />}
-      title="Discover Buyer Group"
-      description="Map the decision makers involved"
+      title="Insight"
+      description=""
       onClick={onClick}
     />
   );
@@ -496,7 +497,7 @@ function InsightsCard({ onClick }) {
     <ActionCard
       icon={<Icon.Bulb />}
       title="Insights"
-      description="Surface key signals about your market"
+      description=""
       onClick={onClick}
     />
   );
@@ -506,8 +507,8 @@ function CurrentTrendCard({ onClick }) {
   return (
     <ActionCard
       icon={<Icon.Trend />}
-      title="Current Trend"
-      description="See what's trending in your space"
+      title="Insight"
+      description=""
       onClick={onClick}
     />
   );
@@ -800,33 +801,6 @@ function ContextPill({ label, value }) {
   );
 }
 
-// ── Typing Dots ──────────────────────────────────────────────────────────────
-function TypingDots() {
-  return (
-    <div className="typing-indicator">
-      <span /><span /><span />
-    </div>
-  );
-}
-
-// ── Suggestion Group ─────────────────────────────────────────────────────────
-function SuggestionGroup({ field, items, onSelect }) {
-  return (
-    <div className="suggestion-group">
-      <div className="suggestion-group-label">
-        <span>{SUGGESTION_LABELS[field] || field}</span>
-      </div>
-      <div className="suggestion-chips">
-        {items.map(item => (
-          <button key={item} className="chip" onClick={() => onSelect(item)}>
-            {item}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Progress Bar ─────────────────────────────────────────────────────────────
 function ProgressBar({ filled, total }) {
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
@@ -898,14 +872,9 @@ function EditableTagList({ values, onChange }) {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════
 export default function Intellegence() {
-  const [messages,      setMessages]      = useState([]);
-  const [input,         setInput]         = useState("");
-  const [loading,       setLoading]       = useState(false);
   const [context,       setContext]       = useState({});
-  const [suggestions,   setSuggestions]   = useState({});
   const [phase,         setPhase]         = useState("product");
-  const [chatHistory,   setChatHistory]   = useState([]);
-  const [activeChatId,  setActiveChatId]  = useState(null);
+  const [sessions,      setSessions]      = useState([]);
   const [sidebarOpen,   setSidebarOpen]   = useState(true);
   const [darkMode,      setDarkMode]      = useState(() => {
     return localStorage.getItem("delphi-theme") === "dark";
@@ -925,15 +894,8 @@ export default function Intellegence() {
   const [selectedProduct,  setSelectedProduct]  = useState(null);
   const [productsLoading,  setProductsLoading]  = useState(false);
 
-  // ── ICP generation ──────────────────────────────────────────────────────────
-  // "Create ICP" no longer opens a modal — it pushes a message into the
-  // chat conversation, and CreateICP renders inline as part of that
-  // message (same pattern as LeadsTable: a rich component alongside
-  // plain-text bubbles, not wrapped in one).
-
-  const bottomRef   = useRef(null);
-  const textareaRef = useRef(null);
-  const sessionRef  = useRef(SESSION_ID);
+  // ── Chat section ref (owns messages/input/session logic against context-engine backend)
+  const chatRef = useRef(null);
 
   // Load user info from localStorage
   const user = useMemo(() => {
@@ -956,23 +918,6 @@ export default function Intellegence() {
       localStorage.setItem("delphi-theme", "light");
     }
   }, [darkMode]);
-
-  // Auto-scroll
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, suggestions, loading]);
-
-  // Auto-resize textarea
-  useEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 140) + "px";
-  }, [input]);
-
-  const pushMessage = useCallback(msg => {
-    setMessages(prev => [...prev, { id: Date.now() + Math.random(), ...msg }]);
-  }, []);
 
   // ── Check selected product on load — forces the picker modal for
   //    first-time users, otherwise silently loads the existing selection ──
@@ -1001,15 +946,15 @@ export default function Intellegence() {
   // ── Start Create ICP as an inline chat message ─────────────────────────────
   const startCreateICP = useCallback(() => {
     setActiveInsight("icp");
-    pushMessage({ role: "user", text: "Create ICP" });
-    pushMessage({ role: "bot", icpFlow: true });
-  }, [pushMessage]);
+    chatRef.current?.pushMessage({ role: "user", text: "Create ICP" });
+    chatRef.current?.pushMessage({ role: "bot", icpFlow: true });
+  }, []);
 
   const startDiscoverBuyerGroup = useCallback((brandIds) => {
     setActiveInsight("buyer_group");
-    pushMessage({ role: "user", text: "Discover Buyer Group" });
-    pushMessage({ role: "bot", buyerGroupFlow: true, brandIds: brandIds || null });
-  }, [pushMessage]);
+    chatRef.current?.pushMessage({ role: "user", text: "Discover Buyer Group" });
+    chatRef.current?.pushMessage({ role: "bot", buyerGroupFlow: true, brandIds: brandIds || null });
+  }, []);
 
   const handleInsightSelect = useCallback((key) => {
     if (key === "icp") {
@@ -1018,9 +963,8 @@ export default function Intellegence() {
       startDiscoverBuyerGroup();
     } else if (key === "geo") {
       setActiveInsight("geo");
-      sendMessage("Give me geo-based personalization insights for my product");
+      chatRef.current?.sendMessage("Give me geo-based personalization insights for my product");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startCreateICP, startDiscoverBuyerGroup]);
 
   // ── Fetch product/service list for the sidebar "Product / Services" modal ─
@@ -1091,88 +1035,6 @@ export default function Intellegence() {
     }
   };
 
-  const sendMessage = useCallback(async (text) => {
-    const finalText = (text || input).trim();
-    if (!finalText || loading) return;
-    pushMessage({ role: "user", text: finalText });
-    setInput("");
-    setLoading(true);
-    setSuggestions({});
-    try {
-      const res = await fetch(`${API_BASE}/context/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionRef.current, message: finalText }),
-      });
-      const data = await res.json();
-      console.log("[API Response]", data);
-      if (data.context)  setContext(data.context);
-      if (data.phase)    setPhase(data.phase);
-      if (data.status === "complete") {
-        if (data.summary) pushMessage({ role: "bot", text: data.summary });
-        pushMessage({ role: "bot", table: data.leads || data.data || [] });
-        setSuggestions({});
-        setPhase("complete");
-      } else {
-        if (data.response) {
-          pushMessage({
-            role: "bot",
-            text: data.response,
-            editApplied: data.edit_applied || null,
-          });
-        }
-        if (data.suggestions) {
-          const filtered = {};
-          for (const [k, v] of Object.entries(data.suggestions)) {
-            if (Array.isArray(v) && v.length > 0) filtered[k] = v;
-          }
-          setSuggestions(filtered);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      pushMessage({ role: "bot", text: "Something went wrong connecting to the server. Please try again." });
-    } finally {
-      setLoading(false);
-    }
-  }, [input, loading, pushMessage]);
-
-  const handleKeyDown = e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const startNewChat = async () => {
-    if (messages.length > 0) {
-      const title = messages.find(m => m.role === "user")?.text?.slice(0, 42) || "Chat";
-      setChatHistory(prev => [{ id: Date.now(), title, messages, context }, ...prev]);
-    }
-    try {
-      await fetch(`${API_BASE}/context/reset`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionRef.current }),
-      });
-    } catch {}
-    setMessages([]);
-    setInput("");
-    setSuggestions({});
-    setContext({});
-    setPhase("product");
-    setActiveChatId(null);
-    setActiveInsight(null);
-  };
-
-  const loadChat = chat => {
-    setMessages(chat.messages);
-    setContext(chat.context || {});
-    setSuggestions({});
-    setActiveChatId(chat.id);
-    setActiveSection(null);
-  };
-
   const filledProductFields   = PRODUCT_FIELD_ORDER.filter(f => context[f]);
   const filledTargetingFields = TARGETING_FIELD_ORDER.filter(f => context[f]);
   const totalFilled           = filledProductFields.length + filledTargetingFields.length;
@@ -1200,7 +1062,7 @@ export default function Intellegence() {
         </div>
 
         {/* New chat */}
-        <button className="new-chat-btn" onClick={startNewChat}>
+        <button className="new-chat-btn" onClick={() => chatRef.current?.startNewChat()}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
           </svg>
@@ -1221,6 +1083,27 @@ export default function Intellegence() {
             activeInsight={activeInsight}
             onSelect={handleInsightSelect}
           />
+
+          {/* Chat history (persisted sessions from context-engine backend) */}
+          {sessions.length > 0 && (
+            <div className="sidebar-panel">
+              <div className="sidebar-panel-title" style={{ padding: "0 8px", marginTop: 10 }}>
+                Recent chats
+              </div>
+              <div className="session-list">
+                {sessions.map(session => (
+                  <button
+                    key={session.id}
+                    className="session-item"
+                    onClick={() => chatRef.current?.selectSession(session.id)}
+                    title={session.title}
+                  >
+                    {session.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -1281,106 +1164,32 @@ export default function Intellegence() {
       {/* ══ MAIN PANEL ═══════════════════════════════════════════ */}
       <main className="main-panel">
 
-        {/* Single scrollable entity: action cards + messages together */}
-        <div className="messages-area">
-
-          {/* Quick action cards — scroll away with the rest of the chat */}
-          <div className="action-cards-grid">
-            <CreateICPCard
-              productName={selectedProduct?.value || context.product_name}
-              onClick={startCreateICP}
-            />
-            <DiscoverBuyerGroupCard
-              onClick={startDiscoverBuyerGroup}
-            />
-            <InsightsCard
-              onClick={() => sendMessage("Give me insights about my target market")}
-            />
-            <CurrentTrendCard
-              onClick={() => sendMessage("What are the current trends relevant to my product?")}
-            />
-          </div>
-
-          {messages.map(msg => (
-            <div key={msg.id} className={`message-row ${msg.role}`}>
-              {msg.role === "bot" && (
-                <div className="bot-avatar" title="Delphi AI">D</div>
-              )}
-              <div className="message-content">
-                {msg.text && <div className="bubble">{msg.text}</div>}
-                {msg.editApplied && (
-                  <div className="edit-badge">
-                    ✓ Updated: {msg.editApplied.field?.replace(/_/g, " ")} → {msg.editApplied.value}
-                  </div>
-                )}
-                {msg.table !== undefined && <LeadsTable rows={msg.table} />}
-                {msg.icpFlow && (
-                  <CreateICP
-                    userId={USER_ID}
-                    onDiscoverBuyerGroup={startDiscoverBuyerGroup}
-                    onOpenProductPicker={() => setActiveSection("product")}
-                  />
-                )}
-                {msg.buyerGroupFlow && (
-                  <BuyerGroup
-                      userId={USER_ID}
-                      brandIds={msg.brandIds}
-                      onOpenProductPicker={() => setActiveSection("product")}
-                  />
-              )}
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="message-row bot">
-              <div className="bot-avatar">D</div>
-              <div className="message-content">
-                <div className="bubble"><TypingDots /></div>
-              </div>
-            </div>
-          )}
-          {!loading && Object.keys(suggestions).length > 0 && (
-            <div className="suggestions-area">
-              {Object.entries(suggestions).map(([field, items]) => (
-                <SuggestionGroup key={field} field={field} items={items} onSelect={sendMessage} />
-              ))}
-            </div>
-          )}
-          <div ref={bottomRef} />
+        {/* Quick action cards */}
+        <div className="action-cards-grid">
+          <CreateICPCard
+            productName={selectedProduct?.value || context.product_name}
+            onClick={startCreateICP}
+          />
+          <DiscoverBuyerGroupCard
+            onClick={startDiscoverBuyerGroup}
+          />
+          <InsightsCard
+            onClick={() => chatRef.current?.sendMessage("Give me insights about my target market")}
+          />
+          <CurrentTrendCard
+            onClick={() => chatRef.current?.sendMessage("What are the current trends relevant to my product?")}
+          />
         </div>
 
-        {/* Input */}
-        <div className="input-zone">
-          <div className="input-card">
-            <textarea
-              ref={textareaRef}
-              className="chat-input"
-              placeholder={
-                phase === "product"
-                  ? "Ask a question about your product or service..."
-                  : phase === "targeting"
-                  ? "Specify your target audience..."
-                  : "Ask a follow-up question or refine your search..."
-              }
-              value={input}
-              rows={1}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
-            <button
-              className="send-btn"
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || loading}
-              title="Send (Enter)"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </div>
-          <p className="input-hint">Enter to send · Shift+Enter for new line · Type "change [field]" to edit</p>
-        </div>
+        {/* Chat: messages + input, backed by the context-engine backend */}
+        <ChatSection
+          ref={chatRef}
+          userId={USER_ID}
+          onContextUpdate={setContext}
+          onPhaseUpdate={setPhase}
+          onSessionsChange={setSessions}
+          onOpenProductPicker={() => setActiveSection("product")}
+        />
       </main>
     </div>
   );

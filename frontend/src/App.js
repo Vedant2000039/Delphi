@@ -30,7 +30,7 @@ import Nav_Sidebar from "./components/Headerbar";
 import PersonaReportPage from "./components/Persona/PersonaReportPage";
 import Intellegence from "./components/Intelligence/intellegence";
 
-import ContextBuilder from "./components/Onboarding/context_builder";
+import chatbox from "./components/Intelligence/ChatSection";
 
 function Layout() {
   const location = useLocation();
@@ -84,9 +84,10 @@ function Layout() {
             <Route path="/icp/leads/:leadId" element={<ProtectedRoute><ICPLeadAnalysis /></ProtectedRoute>} />
             <Route path="/persona-report"element={<ProtectedRoute><PersonaReportPage /></ProtectedRoute>}/>
             <Route path="/Intelligence" element={<ProtectedRoute><Intellegence /></ProtectedRoute>} />
-            <Route path="/context-builder" element={<ProtectedRoute><ContextBuilder /></ProtectedRoute>} />
+            <Route path="/chatbox" element={<ProtectedRoute><chatbox /></ProtectedRoute>} />
             {/* FALLBACK */}
             <Route path="*" element={<Login />} />
+
 
           </Routes>
         </div>

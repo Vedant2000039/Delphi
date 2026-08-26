@@ -1746,6 +1746,81 @@ body {
   box-shadow: 0 0 0 3px var(--emerald-soft);
 }
 
+/* Parent/child grouping — Discover Buyer Group & Uncover Persona nest under Create ICP */
+.insight-group { display: flex; flex-direction: column; }
+
+.insight-item.has-children { padding-right: 6px; }
+
+.insight-item-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: transform 0.18s ease, background var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+.insight-item-chevron.open { transform: rotate(90deg); }
+.insight-item-chevron:hover { background: var(--bg-hover); color: var(--text-pri); }
+
+.insight-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 4px 14px;
+  animation: msgIn 0.16s ease both;
+}
+
+.insight-subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px 6px 4px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-dim);
+  position: relative;
+  transition: all 0.15s ease;
+}
+.insight-subitem:hover { background: var(--bg-hover); color: var(--text-pri); }
+.insight-subitem.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-glow);
+  color: var(--accent-text);
+}
+.insight-subitem-connector {
+  position: relative;
+  width: 12px;
+  height: 100%;
+  flex-shrink: 0;
+}
+.insight-subitem-connector::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: -8px;
+  bottom: 50%;
+  width: 1px;
+  background: var(--border-mid);
+}
+.insight-subitem-connector::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 7px;
+  height: 1px;
+  background: var(--border-mid);
+}
+.insight-subitem-icon { display: flex; opacity: 0.85; flex-shrink: 0; }
+.insight-subitem-label { font-size: 12px; font-weight: 500; flex: 1; }
+
 /* action cards now scroll with messages, not pinned */
 .messages-area .action-cards-grid {
   padding: 8px 24px 20px;
